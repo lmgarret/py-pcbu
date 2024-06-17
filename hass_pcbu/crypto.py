@@ -1,35 +1,42 @@
 import os
 import time
+
 from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 AES_KEY_SIZE = 256
 IV_SIZE = 16
 SALT_SIZE = 16
 ITERATIONS = 65535
+TIMESTAMP_TIMEOUT = 20_000
+
+def current_time_millis() -> int:
+    return int(time.time() * 1000)
 
 def generate_key(pwd: str, salt: bytes) -> bytes:
     kdf = PBKDF2HMAC(
         algorithm=hashes.SHA256(),
         salt=salt,
         iterations=ITERATIONS,
-        length=AES_KEY_SIZE // 8
+        length=AES_KEY_SIZE // 8,
     )
     return kdf.derive(pwd.encode())
 
-def encrypt_aes(src: bytes, pwd: str):
+
+def encrypt_aes(src: bytes, pwd: str) -> bytes:
     salt: bytes = os.urandom(SALT_SIZE)
     key: bytes = generate_key(pwd, salt)
     iv: bytes = os.urandom(IV_SIZE)
 
-    timestamp = int(time.time() * 1000).to_bytes(8) # current time millis
-
     cipher = Cipher(algorithms.AES(key), modes.GCM(iv))
     encryptor = cipher.encryptor()
+
+    timestamp = current_time_millis().to_bytes(8)  # current time millis
     ciphertext = encryptor.update(timestamp + src) + encryptor.finalize()
 
     return iv + salt + ciphertext + encryptor.tag
+
 
 def decrypt_aes(src: bytes, pwd: str) -> bytes:
     iv = src[:IV_SIZE]
@@ -41,5 +48,8 @@ def decrypt_aes(src: bytes, pwd: str) -> bytes:
     cipher = Cipher(algorithms.AES(key), modes.GCM(iv, tag))
     decryptor = cipher.decryptor()
     plaintext = decryptor.update(ciphertext) + decryptor.finalize()
-
-    return plaintext
+    timestamp = int.from_bytes(plaintext[:8])
+    time_diff = current_time_millis() - timestamp
+    if (time_diff < -TIMESTAMP_TIMEOUT or time_diff > TIMESTAMP_TIMEOUT):
+        raise Exception("Invalid timestamp on AES data!")
+    return plaintext[8:]

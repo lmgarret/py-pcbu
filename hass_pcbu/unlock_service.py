@@ -27,7 +27,6 @@ class UnlockService:
         enc_data = self._clean_hex_str(enc_data)
 
         decrypted = decrypt_aes(bytes.fromhex(enc_data), enc_key)
-        LOGGER.debug(f"AES timestamp: {int.from_bytes(decrypted[:8])}")
 
         return json.loads(decrypted[8:].decode())
 

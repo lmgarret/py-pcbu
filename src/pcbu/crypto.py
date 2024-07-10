@@ -32,7 +32,7 @@ def encrypt_aes(src: bytes, pwd: str) -> bytes:
     cipher = Cipher(algorithms.AES(key), modes.GCM(iv))
     encryptor = cipher.encryptor()
 
-    timestamp = current_time_millis().to_bytes(8)  # current time millis
+    timestamp = current_time_millis().to_bytes(8, byteorder="big")  # current time millis
     ciphertext = encryptor.update(timestamp + src) + encryptor.finalize()
 
     return iv + salt + ciphertext + encryptor.tag
@@ -48,7 +48,7 @@ def decrypt_aes(src: bytes, pwd: str) -> bytes:
     cipher = Cipher(algorithms.AES(key), modes.GCM(iv, tag))
     decryptor = cipher.decryptor()
     plaintext = decryptor.update(ciphertext) + decryptor.finalize()
-    timestamp = int.from_bytes(plaintext[:8])
+    timestamp = int.from_bytes(plaintext[:8], byteorder="big")
     time_diff = current_time_millis() - timestamp
     if (time_diff < -TIMESTAMP_TIMEOUT or time_diff > TIMESTAMP_TIMEOUT):
         raise Exception("Invalid timestamp on AES data!")

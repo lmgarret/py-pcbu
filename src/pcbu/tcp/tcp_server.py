@@ -1,8 +1,8 @@
 import logging
 import socketserver
 
-import hass_pcbu.conf as conf
-from hass_pcbu.unlock_service import UnlockService
+import pcbu.conf as conf
+from pcbu.unlock_service import UnlockService
 
 LOGGER = logging.getLogger(__name__)
 
@@ -41,7 +41,7 @@ class TCPHandler(socketserver.BaseRequestHandler):
         ip_addr = self.client_address[0]
         LOGGER.debug(f"Received {len(data)} bytes from {ip_addr}")
         LOGGER.debug(data)
-        payload_size = int.from_bytes(data)
+        payload_size = int.from_bytes(data, byteorder="big")
         LOGGER.debug(f"Expecting next payload size of {payload_size} bytes")
 
         # return actual payload

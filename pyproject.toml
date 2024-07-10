@@ -1,0 +1,28 @@
+[project]
+name = "py-pcbu"
+version = "0.1.0"
+description = "Add your description here"
+authors = [
+    { name = "LM. Garret", email = "9049104+lmgarret@users.noreply.github.com" }
+]
+dependencies = [
+    "py-machineid>=0.6.0",
+    "dataclass-wizard>=0.22.3",
+    "cryptography>=42.0.8",
+]
+readme = "README.md"
+requires-python = ">= 3.8"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.rye]
+managed = true
+dev-dependencies = []
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pcbu"]

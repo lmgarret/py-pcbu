@@ -12,6 +12,8 @@ class PairingMethod(Enum):
 
 @dataclass
 class PairingQRData(JSONWizard):
+    """Pairing data encoded in the QR code shown in the desktop app when pairing"""
+
     ip: str
     port: int
     method: int
@@ -20,6 +22,8 @@ class PairingQRData(JSONWizard):
 
 @dataclass
 class PacketPairInit(JSONWizard):
+    """Initial packet sent by the client to the desktop to start the pairing process"""
+
     proto_version: str
     deviceUUID: str
     device_name: str
@@ -29,6 +33,8 @@ class PacketPairInit(JSONWizard):
 
 @dataclass
 class PacketPairResponse(JSONWizard):
+    """Response from the desktop to the PacketPairInit"""
+
     err_msg: str
     pairing_id: str
     pairing_method: PairingMethod
@@ -38,3 +44,14 @@ class PacketPairResponse(JSONWizard):
     user_name: str
     password: str
 
+
+@dataclass
+class PCPairing:
+    """Model reprensenting a collection of desktop paired with this client"""
+
+    pairing_id: str
+    desktop_ip_address: str  # the ip address sending unlock requests, i.e. the desktop
+    server_ip_address: str  # the ip to listen on for unlock requests
+    username: str
+    password: str
+    encryption_key: str

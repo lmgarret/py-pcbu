@@ -1,18 +1,9 @@
-from dataclasses import dataclass
 import json
 import logging
-from hass_pcbu.crypto import decrypt_aes, encrypt_aes
+from pcbu.crypto import decrypt_aes, encrypt_aes
+from pcbu.models import PCPairing
 
 LOGGER = logging.getLogger(__name__)
-
-
-@dataclass
-class PCPairing:
-    pairing_id: str
-    ip_address: str
-    username: str
-    password: str
-    encryption_key: str
 
 
 class UnlockService:
@@ -28,7 +19,7 @@ class UnlockService:
 
         decrypted = decrypt_aes(bytes.fromhex(enc_data), enc_key)
 
-        return json.loads(decrypted[8:].decode())
+        return json.loads(decrypted.decode())
 
     def unlock_response(self, data: bytes, ip_address: str) -> bytes:
         req_dict = json.loads(data.decode())
@@ -44,9 +35,8 @@ class UnlockService:
                 except Exception as e:
                     raise ValueError(
                         f"Could not decrypt encData from unlock request: {e}"
-                    )
+                    ) from e
                 auth_user = enc_data["authUser"]
-                LOGGER.debug(enc_data)
 
                 if ip_address == pair.ip_address and auth_user == pair.username:
                     response_dict = {

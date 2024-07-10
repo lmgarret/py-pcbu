@@ -1,0 +1,26 @@
+{
+    "pairing_data": {
+        "encKey": "",
+        "ip": "192.168.1.X",
+        "method": 0,
+        "port": 43295
+    },
+    "paired_pcs": [
+        {
+            "server_ip_address": "192.168.1.Y",
+            "pairing_id": "abcdef",
+            "desktop_ip_address": "192.168.1.X",
+            "encryption_key": "some_super_long_key",
+            "username": "user1@desktop",
+            "password": "pwd1"
+        },
+        {
+            "server_ip_address": "192.168.2.Z",
+            "pairing_id": "ghijk",
+            "desktop_ip_address": "192.168.1.X",
+            "encryption_key": "another_super_long_key",
+            "username": "user2@desktop",
+            "password": "pwd2"
+        }
+    ]
+}

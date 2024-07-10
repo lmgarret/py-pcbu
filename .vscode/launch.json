@@ -5,10 +5,17 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Debug Pair Client",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "scripts/test_pair.py",
+            "console": "integratedTerminal"
+        },
+        {
             "name": "Debug Unlock Server",
             "type": "debugpy",
             "request": "launch",
-            "program": "src/tmp_unlock.py",
+            "program": "scripts/test_unlock.py",
             "console": "integratedTerminal"
         }
     ]

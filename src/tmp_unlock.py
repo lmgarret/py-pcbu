@@ -1,7 +1,7 @@
 import json
 import logging
 
-from pcbu.models import  PCPairing
+from pcbu.models import  PCPairing, PCPairingFull
 from pcbu.tcp.unlock_server import TCPUnlockServer
 
 logging.basicConfig(level=logging.DEBUG)
@@ -11,7 +11,7 @@ def get_pc_pairings():
     with open("./conf.json") as json_file:
         conf_json = json.load(json_file)
         return [
-            PCPairing(
+            PCPairingFull(
                 pairing_id=json_obj["pairing_id"],
                 server_ip_address=json_obj["server_ip_address"],
                 desktop_ip_address=json_obj["desktop_ip_address"],
@@ -24,6 +24,12 @@ def get_pc_pairings():
 
 
 PC_PAIRINGS = get_pc_pairings()
+
+# def unlock_handler(pair: PCPairing) -> bool:
+#     return False
+
+# with TCPUnlockServer(PC_PAIRINGS, unlock_handler=unlock_handler) as server:
+#     server.listen()
 
 with TCPUnlockServer(PC_PAIRINGS) as server:
     server.listen()

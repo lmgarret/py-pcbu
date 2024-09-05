@@ -25,7 +25,7 @@ class TCPPairClient:
     def create_packet_pair_init(self) -> PacketPairInit:
         packet_pair_init = PacketPairInit.from_dict(
             {
-                "protoVersion": "1.2.0",
+                "protoVersion": "1.3.0",
                 "deviceUUID": self.machine_uuid,
                 "deviceName": self.device_name,
                 "cloudToken": "",

@@ -14,6 +14,7 @@ jobs:
       uses: astral-sh/setup-uv@v1
       with:
         enable-cache: true
+        version: "0.4.5"
     - name: Build the distribution packages
       run: uv build
     - name: Store the distribution packages

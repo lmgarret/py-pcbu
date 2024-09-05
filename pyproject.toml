@@ -22,3 +22,14 @@ allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/pcbu"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "src",
+  "pyproject.toml",
+  "README.md",
+  "LICENSE",
+]
+exclude = [
+  ".vscode",
+]

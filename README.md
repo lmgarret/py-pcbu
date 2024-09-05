@@ -2,7 +2,8 @@
 
 This library simplifies interactions with [PC Bio Unlock](https://github.com/MeisApps/pcbu-desktop) by implementing its protocol.
 
-## Pairing
+## Usage
+### Pairing
 
 1. First, install [PC Bio Unlock](https://meis-apps.com/pc-bio-unlock/how-to-install) normally. Currently, versions >2.0.0 are supported, probably lower versions too.
 2. In the desktop app, click on `Pair device`. Go through the wizard steps, until you reach the QR Code.
@@ -21,7 +22,7 @@ print(pair_response)
 
 This snippet prints in plaintext the payload received from the desktop. It contains **sensitive informations** such as your account password! So make sure to store it somewhere safe
 
-## Unlocking
+### Unlocking
 py-pcbu gives you a base class to create a server listening for TCP unlock requests. Here is a minimalistic code to get it up and running:
 ```python
 from pcbu.models import PCPairing, PCPairingSecret

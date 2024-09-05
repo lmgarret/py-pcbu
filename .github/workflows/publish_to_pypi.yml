@@ -1,4 +1,4 @@
-name: Publish Python 🐍 distribution 📦 to TestPyPI
+name: Release
 
 on:
   push:
@@ -18,7 +18,7 @@ jobs:
       id: did-version-change
       
   build:
-    name: Build distribution 📦
+    name: Build distribution
     runs-on: ubuntu-latest
     
     # run only if the version has changed
@@ -42,7 +42,7 @@ jobs:
         path: dist/
 
   publish-to-testpypi:
-    name: Publish Python 🐍 distribution 📦 to TestPyPI
+    name: Publish to TestPyPI
     needs:
     - build
     runs-on: ubuntu-latest
@@ -60,14 +60,14 @@ jobs:
       with:
         name: python-package-distributions
         path: dist/
-    - name: Publish distribution 📦 to TestPyPI
+    - name: Publish dists to TestPyPI
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
         repository-url: https://test.pypi.org/legacy/
 
   github-release:
     name: >-
-      Sign the Python 🐍 distribution 📦 with Sigstore
+      Sign the Python distribution with Sigstore
       and upload them to GitHub Release
     needs:
     - publish-to-testpypi

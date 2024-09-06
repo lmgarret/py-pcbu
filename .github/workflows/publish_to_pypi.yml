@@ -11,16 +11,11 @@ jobs:
     runs-on: ubuntu-latest
 
     outputs:
-      is_version_greater: ${{ steps.did-version-change.outputs.is_version_greater }}
-      version: ${{ steps.did-version-change.outputs.version }}
-      changelog: ${{ steps.changelog.outputs.changelog }}
+      is_version_greater: ${{ steps.pyproject-version.outputs.is_version_greater }}
+      version: ${{ steps.pyproject-version.outputs.version }}
     steps:
     - uses: raven-wing/did-python-package-version-change@v1
-      id: did-version-change
-    - uses: rcmachado/changelog-action@v1
-      id: changelog
-      with:
-        args: show ${{ steps.did-version-change.outputs.version }} >> "$GITHUB_OUTPUT"
+      id: pyproject-version
 
   build:
     name: Build distribution
@@ -95,6 +90,12 @@ jobs:
         inputs: >-
           ./dist/*.tar.gz
           ./dist/*.whl
+    - name: Parse Changelog Entry
+      id: changelog
+      uses: coditory/changelog-parser@v1
+      with:
+        version: ${{ needs.version-check.outputs.version }}
+    
     - name: Create GitHub Release
       env:
         GITHUB_TOKEN: ${{ github.token }}
@@ -102,7 +103,7 @@ jobs:
         gh release create
         '${{ needs.version-check.outputs.version }}'
         --repo '${{ github.repository }}'
-        --notes '${{ needs.version-check.outputs.changelog }}'
+        --notes '${{ steps.changelog.outputs.description }}'
     - name: Upload artifact signatures to GitHub Release
       env:
         GITHUB_TOKEN: ${{ github.token }}

@@ -1,6 +1,6 @@
 [project]
 name = "py-pcbu"
-version = "0.1.3"
+version = "0.1.4"
 description = "A package to interact with the PC Bio Unlock credentials module."
 authors = [
     { name = "LM. Garret", email = "lm@codingarret.dev" }

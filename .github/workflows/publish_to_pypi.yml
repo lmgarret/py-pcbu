@@ -6,24 +6,29 @@ on:
     - main
 
 jobs:
-  check:
+  version-check:
     name: Check if the version has changed in pyproject.toml
     runs-on: ubuntu-latest
 
     outputs:
       is_version_greater: ${{ steps.did-version-change.outputs.is_version_greater }}
       version: ${{ steps.did-version-change.outputs.version }}
+      changelog: ${{ steps.changelog.outputs.changelog }}
     steps:
     - uses: raven-wing/did-python-package-version-change@v1
       id: did-version-change
-      
+    - uses: rcmachado/changelog-action@v1
+      id: changelog
+      with:
+        args: show ${{ steps.did-version-change.outputs.version }}
+
   build:
     name: Build distribution
     runs-on: ubuntu-latest
     
     # run only if the version has changed
-    needs: check
-    if: needs.check.outputs.is_version_greater == 'true'
+    needs: version-check
+    if: needs.version-check.outputs.is_version_greater == 'true'
 
     steps:
     - name: Checkout the repository
@@ -71,7 +76,7 @@ jobs:
       and upload them to GitHub Release
     needs:
     - publish-to-testpypi
-    - check
+    - version-check
     runs-on: ubuntu-latest
 
     permissions:
@@ -95,9 +100,9 @@ jobs:
         GITHUB_TOKEN: ${{ github.token }}
       run: >-
         gh release create
-        '${{ needs.check.outputs.version }}'
+        '${{ needs.version-check.outputs.version }}'
         --repo '${{ github.repository }}'
-        --notes ""
+        --notes '${{ needs.version-check.outputs.changelog }}'
     - name: Upload artifact signatures to GitHub Release
       env:
         GITHUB_TOKEN: ${{ github.token }}

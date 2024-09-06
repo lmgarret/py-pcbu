@@ -68,3 +68,17 @@ For easier development, we include two scripts with VSCode launch configuration:
  - `scripts/test_unlock.py`
 
 Both scripts expect a gitignored `conf.local.json` file at the root of the repository. You can `cp conf.template.json conf.local.json` to get a base file to start from.
+
+## Releasing
+Releases are automatically created when a change to `version` in `pyproject.toml` is detected. The new files are automatically uploaded to PyPI and the signed release is uploaded to GitHub Releases.
+The current steps to release are:
+1. Make sure `pyproject.toml` is updated with the new version
+2. Using [cucumber/changelog](https://github.com/cucumber/changelog), add the changes and update `CHANGELOG.md` with the new version
+```console
+./changelog -o CHANGELOG.md added "Add this and that"
+./changelog -o CHANGELOG.md release 0.1.2
+```
+3. Commit the pyproject.toml and CHANGELOG.md changes
+4. Push the changes to GitHub
+5. Wait for the release to be published on PyPI
+6. Wait for the release to be published on GitHub Releases

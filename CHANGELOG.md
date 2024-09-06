@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.5] - 2024-09-06
+### Changed
+- Release using different gh action
+
 ## [0.1.4] - 2024-09-06
 ### Added
 - Publish to PyPI
@@ -19,7 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Initial release!
 
-[Unreleased]: https://github.com/lmgarret/py-pcbu/compare/0.1.4...HEAD
+[Unreleased]: https://github.com/lmgarret/py-pcbu/compare/0.1.5...HEAD
+[0.1.5]: https://github.com/lmgarret/py-pcbu/compare/0.1.4...0.1.5
 [0.1.4]: https://github.com/lmgarret/py-pcbu/compare/0.1.3...0.1.4
 [0.1.3]: https://github.com/lmgarret/py-pcbu/compare/0.1.1...0.1.3
 [0.1.1]: https://github.com/lmgarret/py-pcbu/compare/7072a13019d0054e81e7d8d2ed249a9498bd4ddd...0.1.1

@@ -7,7 +7,7 @@ on:
 
 jobs:
   version-check:
-    name: Check if the version has changed in pyproject.toml
+    name: New version?
     runs-on: ubuntu-latest
 
     outputs:
@@ -18,7 +18,7 @@ jobs:
       id: pyproject-version
 
   changelog:
-    name: Parse Changelog Entry
+    name: Parse version's changelog
     needs: version-check
     runs-on: ubuntu-latest
 
@@ -35,7 +35,7 @@ jobs:
         version: ${{ needs.version-check.outputs.version }}
 
   build:
-    name: Build distribution
+    name: Build dist
     runs-on: ubuntu-latest
     
     # run only if the version has changed
@@ -59,9 +59,7 @@ jobs:
         path: dist/
 
   github-release:
-    name: >-
-      Sign the Python distribution with Sigstore
-      and upload them to GitHub Release
+    name: GitHub release
     needs:
     - build
     - version-check
@@ -85,24 +83,12 @@ jobs:
           ./dist/*.tar.gz
           ./dist/*.whl
   
-    - name: Create GitHub Release
-      env:
-        GITHUB_TOKEN: ${{ github.token }}
-      run: >-
-        gh release create
-        '${{ needs.version-check.outputs.version }}'
-        --repo '${{ github.repository }}'
-        --notes '${{ needs.changelog.outputs.changes }}'
-    - name: Upload artifact signatures to GitHub Release
-      env:
-        GITHUB_TOKEN: ${{ github.token }}
-      # Upload to GitHub Release using the `gh` CLI.
-      # `dist/` contains the built packages, and the
-      # sigstore-produced signatures and certificates.
-      run: >-
-        gh release upload
-        '${{ github.ref_name }}' dist/**
-        --repo '${{ github.repository }}'
+    - name: Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ needs.version-check.outputs.version }}
+        body: ${{ needs.changelog.outputs.changes }}
+        files: dist/**
 
   publish-to-testpypi:
     name: Publish to TestPyPI

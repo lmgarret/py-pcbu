@@ -11,15 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Fixed release CI
 
-## [0.1.2] - 2024-09-06
-### Added
-- Add CHANGELOG and automated release notes
-
 ## [0.1.1] - 2024-09-06
 ### Added
 - Initial release!
 
 [Unreleased]: https://github.com/lmgarret/py-pcbu/compare/0.1.3...HEAD
-[0.1.3]: https://github.com/lmgarret/py-pcbu/compare/0.1.2...0.1.3
-[0.1.2]: https://github.com/lmgarret/py-pcbu/compare/0.1.1...0.1.2
-[0.1.1]: https://github.com/lmgarret/py-pcbu/compare/0.1.0...0.1.1
+[0.1.3]: https://github.com/lmgarret/py-pcbu/compare/0.1.1...0.1.3
+[0.1.1]: https://github.com/lmgarret/py-pcbu/compare/7072a13019d0054e81e7d8d2ed249a9498bd4ddd...0.1.1

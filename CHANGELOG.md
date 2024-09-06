@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Initial release!
 
-[Unreleased]: https://github.com/lmgarret/py-pcbu/compare/0.1.3...0.1.0
-[0.1.3]: https://github.com/lmgarret/py-pcbu/compare/0.1.2...0.1.0
-[0.1.2]: https://github.com/lmgarret/py-pcbu/compare/0.1.1...0.1.0
-[0.1.1]: https://github.com/lmgarret/py-pcbu/compare/main...0.1.0
+[Unreleased]: https://github.com/lmgarret/py-pcbu/compare/0.1.3...HEAD
+[0.1.3]: https://github.com/lmgarret/py-pcbu/compare/0.1.2...0.1.3
+[0.1.2]: https://github.com/lmgarret/py-pcbu/compare/0.1.1...0.1.2
+[0.1.1]: https://github.com/lmgarret/py-pcbu/compare/0.1.0...0.1.1

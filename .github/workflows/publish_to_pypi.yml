@@ -17,6 +17,23 @@ jobs:
     - uses: raven-wing/did-python-package-version-change@v1
       id: pyproject-version
 
+  changelog:
+    name: Parse Changelog Entry
+    needs: version-check
+    runs-on: ubuntu-latest
+
+    outputs:
+      changes: ${{ steps.changelog.outputs.description }}
+
+    steps:
+    - name: Checkout the repository
+      uses: actions/checkout@main
+    - name: Parse Changelog Entry
+      id: changelog
+      uses: coditory/changelog-parser@v1
+      with:
+        version: ${{ needs.version-check.outputs.version }}
+
   build:
     name: Build distribution
     runs-on: ubuntu-latest
@@ -72,6 +89,7 @@ jobs:
     needs:
     - publish-to-testpypi
     - version-check
+    - changelog
     runs-on: ubuntu-latest
 
     permissions:
@@ -90,12 +108,7 @@ jobs:
         inputs: >-
           ./dist/*.tar.gz
           ./dist/*.whl
-    - name: Parse Changelog Entry
-      id: changelog
-      uses: coditory/changelog-parser@v1
-      with:
-        version: ${{ needs.version-check.outputs.version }}
-    
+  
     - name: Create GitHub Release
       env:
         GITHUB_TOKEN: ${{ github.token }}
@@ -103,7 +116,7 @@ jobs:
         gh release create
         '${{ needs.version-check.outputs.version }}'
         --repo '${{ github.repository }}'
-        --notes '${{ steps.changelog.outputs.description }}'
+        --notes '${{ needs.changelog.outputs.changes }}'
     - name: Upload artifact signatures to GitHub Release
       env:
         GITHUB_TOKEN: ${{ github.token }}

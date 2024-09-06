@@ -20,7 +20,7 @@ jobs:
     - uses: rcmachado/changelog-action@v1
       id: changelog
       with:
-        args: show ${{ steps.did-version-change.outputs.version }}
+        args: show ${{ steps.did-version-change.outputs.version }} >> "$GITHUB_OUTPUT"
 
   build:
     name: Build distribution

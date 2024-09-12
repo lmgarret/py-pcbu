@@ -1,5 +1,7 @@
 from abc import ABCMeta, abstractmethod
+
 from collections.abc import Callable
+import asyncio
 import json
 import logging
 import socketserver
@@ -89,7 +91,7 @@ class TCPUnlockServerBase(ContextDecorator, metaclass=ABCMeta):
         self.on_enter()
         return self
 
-    def listen(self):
+    def _listen(self):
         if not self.tcp_servers:
             raise ValueError(
                 "TCP Servers was not initialized. Did you open the context using `with`?"
@@ -107,8 +109,17 @@ class TCPUnlockServerBase(ContextDecorator, metaclass=ABCMeta):
             )
             LOGGER.debug(f"Server loop running in thread '{server_thread.name}'")
         LOGGER.info("TCPUnlockServer started listening for unlock requests")
+
+    def listen(self):
+        self._listen()
         while not self.closed:
             time.sleep(1)
+
+    async def async_listen(self):
+        self._listen()
+        while not self.closed:
+            await asyncio.sleep(1)
+        LOGGER.info("TCPUnlockServer closed.")
 
     def register_unlock_handler(self, unlock_handler):
         self.unlock_handler = unlock_handler

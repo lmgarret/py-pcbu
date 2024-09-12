@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.7] - 2024-09-12
+### Added
+- Allow async listen for TCP unlock server
+
 ## [0.1.6] - 2024-09-12
 ### Added
 - Allow tweaking pairing timeout
@@ -27,7 +31,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Initial release!
 
-[Unreleased]: https://github.com/lmgarret/py-pcbu/compare/0.1.6...HEAD
+[Unreleased]: https://github.com/lmgarret/py-pcbu/compare/0.1.7...HEAD
+[0.1.7]: https://github.com/lmgarret/py-pcbu/compare/0.1.6...0.1.7
 [0.1.6]: https://github.com/lmgarret/py-pcbu/compare/0.1.5...0.1.6
 [0.1.5]: https://github.com/lmgarret/py-pcbu/compare/0.1.4...0.1.5
 [0.1.4]: https://github.com/lmgarret/py-pcbu/compare/0.1.3...0.1.4

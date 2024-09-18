@@ -12,6 +12,7 @@ from typing import Optional, Tuple
 
 from pcbu.crypto import decrypt_aes, encrypt_aes
 from pcbu.models import PCPairing, PCPairingSecret
+from pcbu.tcp.common import receive, send
 
 LOGGER = logging.getLogger(__name__)
 UnlockHandler = Callable[[PCPairing], bool]
@@ -174,7 +175,7 @@ class TCPHandler(socketserver.BaseRequestHandler):
 
     def handle(self):
         while True:
-            self.data = self.receive()
+            self.data = receive(self.request)
 
             if len(self.data) == 0:
                 LOGGER.debug("Received empty packet, stopping")
@@ -204,11 +205,11 @@ class TCPHandler(socketserver.BaseRequestHandler):
                 response = self.unlock_response(pairing, unlock_token)
                 if unlock:
                     LOGGER.info(f"Sending password to {ip_addr} to unlock")
-                    self.send(response)
+                    send(self.request, response)
                 else:
                     LOGGER.info("Unlock handler returned false, denying unlock request")
                     # TODO send correct payload to deny unlocking
-                    self.send(b"\0x")
+                    send(self.request, b"\0x")
 
     def _clean_hex_str(self, s: str) -> str:
         return s.replace("\u0000", "").replace("\x00", "")
@@ -257,25 +258,6 @@ class TCPHandler(socketserver.BaseRequestHandler):
             "password": pairing.password,
         }
         return encrypt_aes(json.dumps(response_dict).encode(), pairing.encryption_key)
-
-    def receive(self) -> bytes:
-        # wait for first packet giving payload size
-        data = self.request.recv(1024).strip()
-        if data == b"CLOSE":
-            # for some commands, pcbu does not send the size first...
-            return data
-        ip_addr = self.client_address[0]
-        LOGGER.debug(f"Received {len(data)} bytes from {ip_addr}")
-        payload_size = int.from_bytes(data, byteorder="big")
-        LOGGER.debug(f"Expecting next payload size of {payload_size} bytes")
-
-        # return actual payload
-        return self.request.recv(1024).strip()
-
-    def send(self, data: bytes):
-        # pcbu have this weird protocol where you send the bytes length before the payload
-        self.request.sendall(len(data).to_bytes(2, "big"))
-        self.request.sendall(data)
 
     def close(self):
         self.server.close_request(self.request)

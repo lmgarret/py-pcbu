@@ -1,6 +1,6 @@
 # py-pcbu
 
-This library simplifies interactions with [PC Bio Unlock](https://github.com/MeisApps/pcbu-desktop) by implementing its protocol.
+This library automates interactions with [PC Bio Unlock](https://github.com/MeisApps/pcbu-desktop) by implementing its protocol.
 
 ## Usage
 ### Pairing

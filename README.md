@@ -31,6 +31,7 @@ from pcbu.tcp.unlock_server import TCPUnlockServerBase
 pairings_dicts =   [
     {
         "server_ip_address": "192.168.1.Y",
+        "server_port": 43296,
         "pairing_id": "abcdef",
         "desktop_ip_address": "192.168.1.X",
         "encryption_key": "some_super_long_key",
@@ -39,6 +40,7 @@ pairings_dicts =   [
     },
     {
         "server_ip_address": "192.168.2.Z",
+        "server_port": 43296,
         "pairing_id": "ghijk",
         "desktop_ip_address": "192.168.1.X",
         "encryption_key": "another_super_long_key",

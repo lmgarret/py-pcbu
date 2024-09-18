@@ -10,6 +10,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 class TCPPairClient:
+    """Client initiating the pairing process,  i.e. emulating your smartphone in PCBU's default setup."""
     def __init__(
         self,
         pairing_qr_data: PairingQRData,

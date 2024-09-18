@@ -1,13 +1,26 @@
 {
     "pairing_data": {
-        "encKey": "",
+        "encKey": "some_super_long_key",
         "ip": "192.168.1.X",
         "method": 0,
         "port": 43295
     },
+    "pairing_response": {
+        "err_msg": "",
+        "pairing_id": "abcdef",
+        "pairing_method": "TCP",
+        "host_name": "Host machine name",
+        "host_os": "Some OS",
+        "host_address": "192.168.1.Y",
+        "host_port": 43296,
+        "mac_address": "FF:EE:DD:CC:BB:AA",
+        "username": "user1@desktop",
+        "password": "pwd1"
+    }, 
     "paired_pcs": [
         {
             "server_ip_address": "192.168.1.Y",
+            "server_port": 43296,
             "pairing_id": "abcdef",
             "desktop_ip_address": "192.168.1.X",
             "encryption_key": "some_super_long_key",
@@ -16,6 +29,7 @@
         },
         {
             "server_ip_address": "192.168.2.Z",
+            "server_port": 43296,
             "pairing_id": "ghijk",
             "desktop_ip_address": "192.168.1.X",
             "encryption_key": "another_super_long_key",

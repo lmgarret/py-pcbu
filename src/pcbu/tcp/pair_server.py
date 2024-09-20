@@ -1,6 +1,6 @@
 from asyncio import StreamReader, StreamWriter
 import asyncio
-from contextlib import ContextDecorator
+from contextlib import AsyncContextDecorator
 import logging
 from typing import Optional
 
@@ -11,7 +11,7 @@ from pcbu.tcp.common import areceive, asend
 LOGGER = logging.getLogger(__name__)
 
 
-class TCPPairServer(ContextDecorator):
+class TCPPairServer(AsyncContextDecorator):
     """This emulate the 'server' part of PCBU in the pairing process, i.e. the desktop to be unlocked."""
 
     def __init__(
@@ -24,9 +24,10 @@ class TCPPairServer(ContextDecorator):
         self._server = None
 
     async def __aenter__(self):
-        self._server = await asyncio.start_server(
-            self._handle, self.pairing_qr_data.ip, self.pairing_qr_data.port
-        )
+        ip = self.pairing_qr_data.ip
+        port = self.pairing_qr_data.port
+        self._server = await asyncio.start_server(self._handle, ip, port)
+        LOGGER.info(f"Binding TCPPairServer to {ip}:{port}")
         await self._server.__aenter__()
         return self
 
@@ -36,13 +37,11 @@ class TCPPairServer(ContextDecorator):
         LOGGER.info("TCPPairServer closed.")
         return False
 
-    async def start(self, timeout: Optional[float] = None):
+    async def start(self):
         if self._server is None:
             raise RuntimeError("Cannot start TCPPairServer as it was closed.")
 
-        LOGGER.info(
-            f"Starting TCPPairServer on {self.pairing_qr_data.ip}:{self.pairing_qr_data.port}..."
-        )
+        LOGGER.info("Starting TCPPairServer...")
         await self._server.serve_forever()
 
     async def _handle(self, reader: StreamReader, writer: StreamWriter):
@@ -63,6 +62,7 @@ class TCPPairServer(ContextDecorator):
             snd_enc_data = encrypt_aes(snd_data, self.pairing_qr_data.enc_key)
             await asend(writer, snd_enc_data)
             LOGGER.debug("Sent PacketPairResponse")
+            LOGGER.info(f"Successfully paired with {packet_pair_init.device_name}!")
 
         except Exception:
             LOGGER.exception("Error handling connection")

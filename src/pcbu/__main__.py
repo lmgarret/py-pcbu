@@ -2,13 +2,15 @@ import asyncio
 import io
 import json
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 import typer
 import logging
 from pcbu.helpers import get_ip
 from pcbu.tcp.pair_server import TCPPairServer
-from pcbu.models import PairingQRData, PacketPairResponse
+from pcbu.models import PCPairingSecret, PairingQRData, PacketPairResponse
 from qrcode.main import QRCode
+
+from pcbu.tcp.unlock_server import TCPUnlockServer
 
 app = typer.Typer(pretty_exceptions_show_locals=False)
 
@@ -16,6 +18,7 @@ LOGGER = logging.getLogger(__name__)
 
 CONF_PAIRING_DATA = "pairing_data"
 CONF_PAIRING_RESPONSE = "pairing_response"
+CONF_PAIRINGS = "paired_pcs"
 
 # may be overidden by --conf option
 _CONF_PATH: Path = Path("conf.local.json")
@@ -30,7 +33,7 @@ def print_qr(data: str):
     LOGGER.info(f.read())
 
 
-def load_conf() -> dict[str, any]:
+def load_conf() -> dict[str, Any]:
     if not _CONF_PATH.exists():
         LOGGER.info(f"Conf file {_CONF_PATH} does not exist")
         raise typer.Exit(code=1)
@@ -78,15 +81,14 @@ def pair_server(
     pairing_response: PacketPairResponse = PacketPairResponse.from_dict(
         conf[CONF_PAIRING_RESPONSE]
     )
-    if ip == "auto":
-        auto_ip = get_ip()
-        LOGGER.debug(f"'auto' was passed as IP, will automatically bind to {auto_ip}.")
-        pairing_data.ip = auto_ip
-        pairing_response.host_address = auto_ip
-    elif ip != "":
+
+    if ip:
         LOGGER.debug(
             f"IP {ip} was given in CLI, will bind to it instead of the conf one."
         )
+        if ip == "auto":
+            ip = get_ip()
+            LOGGER.debug(f"'auto' was passed as IP, will automatically bind to {ip}.")
         pairing_data.ip = ip
         pairing_response.host_address = ip
 
@@ -97,6 +99,42 @@ def pair_server(
         async with TCPPairServer(
             pairing_qr_data=pairing_data, pairing_response=pairing_response
         ) as server:
+            await server.start()
+
+    asyncio.run(_astart_server())
+
+
+@app.command()
+def unlock_server(
+    ip: Annotated[
+        str,
+        typer.Option(
+            help="IP to bind to. Defaults to the 'pairing_data.ip' value in the conf file."
+            " 'auto' will derive the IP automatically."
+        ),
+    ] = "",
+):
+    conf = load_conf()
+    if CONF_PAIRINGS not in conf:
+        LOGGER.info(f"Conf file is missing a '{CONF_PAIRINGS}' section.")
+        raise typer.Exit(code=1)
+
+    pairings: list[PCPairingSecret] = [
+        PCPairingSecret.from_dict(d) for d in conf[CONF_PAIRINGS]
+    ]
+
+    if ip:
+        LOGGER.debug(
+            f"IP {ip} was given in CLI, will bind to it instead of the conf one."
+        )
+        if ip == "auto":
+            ip = get_ip()
+            LOGGER.debug(f"'auto' was passed as IP, will automatically bind to {ip}.")
+        for pairing in pairings:
+            pairing.server_ip_address = ip
+
+    async def _astart_server():
+        async with TCPUnlockServer(pc_pairings=pairings) as server:
             await server.start()
 
     asyncio.run(_astart_server())

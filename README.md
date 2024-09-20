@@ -52,15 +52,18 @@ pc_pairings = [PCPairingSecret.from_dict(d) for d in pairing_dicts]
 
 class TCPUnlockServer(TCPUnlockServerBase):
 
-    def on_valid_unlock_request(self, pairing: PCPairing) -> bool:
+    def on_valid_unlock_request(self, pairing: PCPairing):
         print(f"Accepting unlock request from {pairing.desktop_ip_address}!")
+        self.unlock()
         return True
 
-with TCPUnlockServer(pc_pairings) as server:
-    server.listen()
+async with TCPUnlockServer(pc_pairings) as server:
+    await server.listen()
 ```
 
-This snippet will start a `TCPUnlockServer` listening on each of the `server_ip_address` from the `PCPairingSecret` list, using port `43298` by default (same as PC Bio Unlock's default).
+Note that the `pcbu.tcp.unlock_server` module already provides a similar basic implementation of `TCPUnlockServer`. 
+
+This snippet will start a `TCPUnlockServer` listening on each of the `server_ip_address`:`server_port` from the `PCPairingSecret` list, using port `43298` by default (same as PC Bio Unlock's default).
 When the server receivces an unlocking request, it will validate that the requestee's ip addres matches one of the `PCPairingSecret` instances, decrypt the unlock request, and call `on_valid_unlock_request` which you have to implement.
 In this snippet, the implementation of `on_valid_unlock_request` automatically accepts the unlocking request, but you could add more external conditions to allow it.
 
@@ -70,6 +73,14 @@ For easier development, we include two scripts with VSCode launch configuration:
  - `scripts/test_unlock.py`
 
 Both scripts expect a gitignored `conf.local.json` file at the root of the repository. You can `cp conf.template.json conf.local.json` to get a base file to start from.
+
+## TODOs
+ - [X] Rewrite `TCPPairServer` with `asyncio`
+ - [ ] Rewrite `TCPPairClient` with `asyncio`
+ - [X] Rewrite `TCPUnlockServer` with `asyncio`
+ - [ ] Write a `TCPUnlockClient` (i.e. emulating a Desktop requesting an unlock) with `asyncio`
+ - [ ] Add `pair-client` command (removing `scripts/test_pair.py`)
+ - [ ] Add `unlock-client` command
 
 ## Releasing
 Releases are automatically created when a change to `version` in `pyproject.toml` is detected. The new files are automatically uploaded to PyPI and the signed release is uploaded to GitHub Releases.

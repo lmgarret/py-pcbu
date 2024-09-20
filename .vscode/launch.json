@@ -12,20 +12,22 @@
             "console": "integratedTerminal"
         },
         {
-            "name": "Debug Unlock Server",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "scripts/test_unlock.py",
-            "console": "integratedTerminal"
-        },
-        {
             "name": "Debug Pair Server",
             "type": "debugpy",
             "request": "launch",
             "module": "pcbu",
-            "args": ["-v", "pair_server", "--ip", "auto"],
+            "args": ["-v", "pair-server", "--ip", "auto"],
             "console": "integratedTerminal",
             "justMyCode": true
-        }
+        },
+        {
+            "name": "Debug Unlock Server",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "pcbu",
+            "args": ["-v", "unlock-server", "--ip", "auto"],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
     ]
 }

@@ -50,7 +50,7 @@ class PacketPairResponse(JSONWizard):
 
 @dataclass
 class PCPairing(JSONWizard):
-    """Model reprensenting a collection of desktop paired with this client"""
+    """Model reprensenting a desktop (unlock-client) paired with a (unlock-server)"""
 
     pairing_id: str
     desktop_ip_address: str  # the ip address sending unlock requests, i.e. the desktop
@@ -60,7 +60,7 @@ class PCPairing(JSONWizard):
 
 @dataclass
 class PCPairingSecret(PCPairing):
-    """Model reprensenting a desktop paired with this client. Contains sensitive fields"""
+    """Augmented PCPairing with sensitive fields"""
 
     username: str
     password: str

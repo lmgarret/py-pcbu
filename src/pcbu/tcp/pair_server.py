@@ -2,7 +2,6 @@ from asyncio import StreamReader, StreamWriter
 import asyncio
 from contextlib import AsyncContextDecorator
 import logging
-from typing import Optional
 
 from pcbu.crypto import decrypt_aes, encrypt_aes
 from pcbu.models import PacketPairInit, PacketPairResponse, PairingQRData

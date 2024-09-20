@@ -23,7 +23,7 @@
             "type": "debugpy",
             "request": "launch",
             "module": "pcbu",
-            "args": ["-v", "pair_server"],
+            "args": ["-v", "pair_server", "--ip", "auto"],
             "console": "integratedTerminal",
             "justMyCode": true
         }

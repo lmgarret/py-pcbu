@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2024-09-23
+### Added
+- Async support for all components
+- CLI commands  and
+- CLI commands `pair-client` and `unlock-server`
+
+### Fixed
+- Improper unbinding in TCPUnlockServerBase, causing port to be unusable when restarting
+
 ## [0.2.0] - 2024-09-18
 ### Added
 - Command to emulate a Pairing Server
@@ -41,7 +50,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Initial release!
 
-[Unreleased]: https://github.com/lmgarret/py-pcbu/compare/0.2.0...HEAD
+[Unreleased]: https://github.com/lmgarret/py-pcbu/compare/0.3.0...HEAD
+[0.3.0]: https://github.com/lmgarret/py-pcbu/compare/0.2.0...0.3.0
 [0.2.0]: https://github.com/lmgarret/py-pcbu/compare/0.1.7...0.2.0
 [0.1.7]: https://github.com/lmgarret/py-pcbu/compare/0.1.6...0.1.7
 [0.1.6]: https://github.com/lmgarret/py-pcbu/compare/0.1.5...0.1.6

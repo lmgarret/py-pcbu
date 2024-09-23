@@ -5,14 +5,15 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Debug Pair Client",
+            "name": "Pair Client",
             "type": "debugpy",
             "request": "launch",
-            "program": "scripts/test_pair.py",
+            "module": "pcbu",
+            "args": ["-v", "pair-client"],
             "console": "integratedTerminal"
         },
         {
-            "name": "Debug Pair Server",
+            "name": "Pair Server",
             "type": "debugpy",
             "request": "launch",
             "module": "pcbu",
@@ -21,7 +22,7 @@
             "justMyCode": true
         },
         {
-            "name": "Debug Unlock Server",
+            "name": "Unlock Server",
             "type": "debugpy",
             "request": "launch",
             "module": "pcbu",

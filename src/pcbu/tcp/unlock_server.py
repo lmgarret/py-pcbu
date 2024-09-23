@@ -54,7 +54,11 @@ class TCPUnlockServerBase(AsyncContextDecorator, metaclass=ABCMeta):
     async def __aenter__(self):
         await self._context_stack.__aenter__()
         for port in {pair.server_port for pair in self.pc_pairings}:
-            ips = {pair.server_ip_address for pair in self.pc_pairings}
+            ips = {
+                pair.server_ip_address
+                for pair in self.pc_pairings
+                if pair.server_port == port
+            }
             LOGGER.info(f"Binding TCPUnlockServer to {ips}:{port}")
             server = await asyncio.start_server(
                 self._create_handler(ips, port), list(ips), port
@@ -81,7 +85,7 @@ class TCPUnlockServerBase(AsyncContextDecorator, metaclass=ABCMeta):
 
         async with asyncio.TaskGroup() as tg:
             for s in self._servers.values():
-                tg.create_task(s.serve_forever()) 
+                tg.create_task(s.serve_forever())
 
     async def on_enter(self) -> bool:
         """Method called whenever the server's context is entered.
@@ -137,7 +141,7 @@ class TCPUnlockServerBase(AsyncContextDecorator, metaclass=ABCMeta):
 
             LOGGER.debug("Wait for packets...")
             rcv_data = await areceive(reader)
-            client_ip = writer.get_extra_info("peername")
+            client_ip, client_port = writer.get_extra_info("peername")
 
             # TODO check that:
             # 1. the CLOSE instruction is exactly like that (probably should decode)
@@ -166,14 +170,13 @@ class TCPUnlockServerBase(AsyncContextDecorator, metaclass=ABCMeta):
                 await self.on_invalid_unlock_request(client_ip)
                 return
 
-            await self.on_valid_unlock_request(pairing.mask())
-
             # register writer for async unlock request sending
             self._unlock_packet_writers[
                 (pairing.server_port, pairing.desktop_ip_address)
             ] = UnlockPacketWriter(
                 unlock_token=unlock_token, pc_pairing=pairing, writer=writer
             )
+            await self.on_valid_unlock_request(pairing.mask())
 
         return handle
 
@@ -192,6 +195,7 @@ class TCPUnlockServerBase(AsyncContextDecorator, metaclass=ABCMeta):
                     enc_data = decrypt_aes(
                         bytes.fromhex(req_dict["encData"]), pairing.encryption_key
                     )
+                    enc_data = json.loads(enc_data.decode())
                     # enc_data = self._decrypt_enc_data(
                     #     req_dict["encData"], pairing.encryption_key
                     # )
@@ -213,5 +217,7 @@ class TCPUnlockServer(TCPUnlockServerBase):
     """A simple implementation of the TCPUnlockServerBase, which
     automatically unlocks if a valid unlock request was received"""
 
-    def on_valid_unlock_request(self, pairing: PCPairing) -> Coroutine[Any, Any, bool]:
-        self.unlock(pairing=pairing)
+    async def on_valid_unlock_request(
+        self, pairing: PCPairing
+    ) -> Coroutine[Any, Any, bool]:
+        await self.unlock(pairing=pairing)

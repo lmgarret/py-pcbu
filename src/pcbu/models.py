@@ -25,11 +25,11 @@ class PairingQRData(JSONWizard):
 class PacketPairInit(JSONWizard):
     """Initial packet sent by the client to the desktop to start the pairing process"""
 
-    proto_version: str
-    deviceUUID: str
+    device_uuid: Annotated[str, json_key("deviceUUID", all=True)]
+    ip_address: str
     device_name: str
-    ipAddress: str
-    cloudToken: str
+    proto_version: str = "1.3.0"
+    cloud_token: str = ""
 
 
 @dataclass

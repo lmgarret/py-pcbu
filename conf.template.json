@@ -16,22 +16,22 @@
         "mac_address": "FF:EE:DD:CC:BB:AA",
         "username": "user1@desktop",
         "password": "pwd1"
-    }, 
+    },
     "paired_pcs": [
         {
             "server_ip_address": "192.168.1.Y",
             "server_port": 43296,
             "pairing_id": "abcdef",
-            "desktop_ip_address": "192.168.1.X",
+            "desktop_ip_address": "192.168.1.Y",
             "encryption_key": "some_super_long_key",
             "username": "user1@desktop",
             "password": "pwd1"
         },
         {
-            "server_ip_address": "192.168.2.Z",
-            "server_port": 43296,
+            "server_ip_address": "192.168.1.Y",
+            "server_port": 43297,
             "pairing_id": "ghijk",
-            "desktop_ip_address": "192.168.1.X",
+            "desktop_ip_address": "192.168.2.Z",
             "encryption_key": "another_super_long_key",
             "username": "user2@desktop",
             "password": "pwd2"

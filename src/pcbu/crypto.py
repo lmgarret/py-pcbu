@@ -13,8 +13,10 @@ ITERATIONS = 65535
 TIMESTAMP_SIZE = 8
 TIMESTAMP_TIMEOUT = 20_000
 
+
 def current_time_millis() -> int:
     return int(time.time() * 1000)
+
 
 def generate_key(pwd: str, salt: bytes) -> bytes:
     kdf = PBKDF2HMAC(
@@ -34,7 +36,9 @@ def encrypt_aes(src: bytes, pwd: str) -> bytes:
     cipher = Cipher(algorithms.AES(key), modes.GCM(iv))
     encryptor = cipher.encryptor()
 
-    timestamp = current_time_millis().to_bytes(8, byteorder="big")  # current time millis
+    timestamp = current_time_millis().to_bytes(
+        8, byteorder="big"
+    )  # current time millis
     ciphertext = encryptor.update(timestamp + src) + encryptor.finalize()
 
     return iv + salt + ciphertext + encryptor.tag
@@ -42,8 +46,8 @@ def encrypt_aes(src: bytes, pwd: str) -> bytes:
 
 def decrypt_aes(src: bytes, pwd: str) -> bytes:
     iv = src[:IV_SIZE]
-    salt = src[IV_SIZE:IV_SIZE + SALT_SIZE]
-    ciphertext = src[IV_SIZE + SALT_SIZE:-GCM_TAG_SIZE]
+    salt = src[IV_SIZE : IV_SIZE + SALT_SIZE]
+    ciphertext = src[IV_SIZE + SALT_SIZE : -GCM_TAG_SIZE]
     tag = src[-GCM_TAG_SIZE:]
 
     key = generate_key(pwd, salt)
@@ -52,6 +56,6 @@ def decrypt_aes(src: bytes, pwd: str) -> bytes:
     plaintext = decryptor.update(ciphertext) + decryptor.finalize()
     timestamp = int.from_bytes(plaintext[:TIMESTAMP_SIZE], byteorder="big")
     time_diff = current_time_millis() - timestamp
-    if (time_diff < -TIMESTAMP_TIMEOUT or time_diff > TIMESTAMP_TIMEOUT):
+    if time_diff < -TIMESTAMP_TIMEOUT or time_diff > TIMESTAMP_TIMEOUT:
         raise Exception("Invalid timestamp on AES data!")
     return plaintext[TIMESTAMP_SIZE:]

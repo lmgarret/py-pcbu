@@ -1,6 +1,6 @@
 [project]
 name = "py-pcbu"
-version = "0.4.0"
+version = "0.4.1"
 description = "A package to interact with the PC Bio Unlock credentials module."
 authors = [
     { name = "LM. Garret", email = "lm@codingarret.dev" }
@@ -12,6 +12,12 @@ dependencies = [
 ]
 readme = "README.md"
 requires-python = ">= 3.8"
+
+[project.urls]
+Homepage = "https://github.com/lmgarret/py-pcbu"
+Repository = "https://github.com/lmgarret/py-pcbu.git"
+Issues = "https://github.com/lmgarret/py-pcbu/issues"
+Changelog = "https://github.com/lmgarret/py-pcbu/blob/master/CHANGELOG.md"
 
 [project.optional-dependencies]
 cli = [

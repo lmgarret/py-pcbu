@@ -118,7 +118,8 @@ for more info.
  - [X] Rewrite `TCPUnlockServer` with `asyncio`
  - [X] Write a `TCPUnlockClient` (i.e. emulating a Desktop requesting an unlock) with `asyncio`
  - [X] Add `pair-client` command (removing `scripts/test_pair.py`)
- - [ ] Add `unlock-client` command
+ - [X] Add `unlock-client` command
+ - [ ] Handle more failure cases (e.g. rejected UnlockRequest on the client)
 
 ## Releasing
 Releases are automatically created when a change to `version` in `pyproject.toml` is detected. The new files are automatically uploaded to PyPI and the signed release is uploaded to GitHub Releases.

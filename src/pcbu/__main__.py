@@ -6,16 +6,18 @@ from typing import Annotated, Any, Optional
 import typer
 import logging
 from pcbu.helpers import get_ip
-from pcbu.tcp.pair_client import TCPPairClient
-from pcbu.tcp.pair_server import TCPPairServer
 from pcbu.models import (
     PCPairingSecret,
+    PacketUnlockResponse,
     PairingQRData,
     PacketPairResponse,
 )
+from pcbu.tcp.pair_client import TCPPairClient
+from pcbu.tcp.pair_server import TCPPairServer
+from pcbu.tcp.unlock_client import TCPUnlockClient
+from pcbu.tcp.unlock_server import TCPUnlockServer
 from qrcode.main import QRCode
 
-from pcbu.tcp.unlock_server import TCPUnlockServer
 
 app = typer.Typer(pretty_exceptions_show_locals=False)
 
@@ -187,6 +189,72 @@ def unlock_server(
             await server.start()
 
     asyncio.run(_astart_server())
+
+
+@app.command()
+def unlock_client(
+    target: Annotated[
+        str,
+        typer.Argument(
+            help=(
+                "id of the paired_pcs to send an unlock request to, "
+                "OR IP address of the paired_pcs to send an unlock request to, "
+                "OR pairing_id to the unlock request to."
+            )
+        ),
+    ],
+    timeout: Annotated[
+        int,
+        typer.Option(help="Timeout for packet exchange, in seconds."),
+    ] = 5,
+    show_password: Annotated[
+        bool,
+        typer.Option(
+            "-k",
+            help="Prints the whole PairingResponse, including the password. !DANGER!",
+        ),
+    ] = False,
+):
+    conf = load_conf()
+    if CONF_PAIRINGS not in conf:
+        LOGGER.info(f"Conf file is missing a '{CONF_PAIRINGS}' section.")
+        raise typer.Exit(code=1)
+
+    pairings: list[PCPairingSecret] = [
+        PCPairingSecret.from_dict(d) for d in conf[CONF_PAIRINGS]
+    ]
+
+    pairing = None
+    try:
+        idx = int(target)
+        pairing = pairings[idx]
+    except ValueError:
+        pass
+
+    if not pairing:
+        for p in pairings:
+            if p.desktop_ip_address == target:
+                pairing = p
+                break
+            elif p.pairing_id == target:
+                pairing = p
+                break
+    if not pairing:
+        raise ValueError(f"Could not find target '{target}'.")
+
+    async def _aunlock():
+        client = TCPUnlockClient(pairing=pairing)
+        LOGGER.info(
+            f"Start unlocking process with server at {pairing.server_ip_address}:{pairing.server_port}..."
+        )
+        response: PacketUnlockResponse = await client.unlock(timeout=float(timeout))
+        LOGGER.info("Success! Received: ")
+        if not show_password:
+            # mask password
+            response.password = ""
+        LOGGER.info(response)
+
+    asyncio.run(_aunlock())
 
 
 if __name__ == "__main__":

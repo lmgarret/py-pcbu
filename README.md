@@ -116,7 +116,7 @@ for more info.
  - [X] Rewrite `TCPPairServer` with `asyncio`
  - [X] Rewrite `TCPPairClient` with `asyncio`
  - [X] Rewrite `TCPUnlockServer` with `asyncio`
- - [ ] Write a `TCPUnlockClient` (i.e. emulating a Desktop requesting an unlock) with `asyncio`
+ - [X] Write a `TCPUnlockClient` (i.e. emulating a Desktop requesting an unlock) with `asyncio`
  - [X] Add `pair-client` command (removing `scripts/test_pair.py`)
  - [ ] Add `unlock-client` command
 

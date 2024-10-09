@@ -69,3 +69,23 @@ class PCPairingSecret(PCPairing):
     def mask(self) -> PCPairing:
         """Returns a PCPairing without any of the secrets"""
         return PCPairing.from_dict(self.to_dict())
+
+
+@dataclass
+class PacketUnlockRequest(JSONWizard):
+    pairing_id: str
+    enc_data: str  # an EncryptedUnlockPayload, encrypted of course
+
+
+@dataclass
+class EncryptedUnlockPayload(JSONWizard):
+    """Model for PacketUnlockRequest.enc_data once decrypted"""
+
+    auth_user: str
+    unlock_token: str
+
+
+@dataclass
+class PacketUnlockResponse(JSONWizard):
+    unlock_token: str
+    password: str  # SENSITIVE! The account's password

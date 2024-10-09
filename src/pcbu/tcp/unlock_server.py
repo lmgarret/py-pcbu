@@ -3,12 +3,14 @@ from asyncio import Server, StreamReader, StreamWriter
 import asyncio
 from collections.abc import Callable
 from contextlib import AsyncContextDecorator, AsyncExitStack
-import json
 import logging
 from typing import Any, Awaitable, Coroutine, Optional, Tuple
 
 from pcbu.crypto import decrypt_aes, encrypt_aes
 from pcbu.models import (
+    EncryptedUnlockPayload,
+    PacketUnlockRequest,
+    PacketUnlockResponse,
     PCPairing,
     PCPairingSecret,
 )
@@ -29,13 +31,10 @@ class UnlockPacketWriter:
         await asend(self.writer, self.unlock_response())
 
     def unlock_response(self) -> bytes:
-        response_dict = {
-            "unlockToken": self.unlock_token,
-            "password": self.pc_pairing.password,
-        }
-        return encrypt_aes(
-            json.dumps(response_dict).encode(), self.pc_pairing.encryption_key
+        response = PacketUnlockResponse(
+            unlock_token=self.unlock_token, password=self.pc_pairing.password
         )
+        return encrypt_aes(response.to_json().encode(), self.pc_pairing.encryption_key)
 
 
 class TCPUnlockServerBase(AsyncContextDecorator, metaclass=ABCMeta):
@@ -158,14 +157,14 @@ class TCPUnlockServerBase(AsyncContextDecorator, metaclass=ABCMeta):
 
                 if pairing is None or unlock_token is None:
                     raise ValueError(
-                        "Server listening on {ips}:{port} found no pairing for desktop at {client_ip}."
+                        f"Server listening on {ips}:{port} found no pairing for desktop at {client_ip}."
                     )
                 LOGGER.info(
                     f"Received PacketUnlockRequest from {client_ip}, for user {pairing.username}"
                 )
             except ValueError:
                 LOGGER.exception(
-                    "Could not match client ip and received request with a pairing, restarting listener."
+                    "Could not match client ip and received request with a pairing."
                 )
                 await self.on_invalid_unlock_request(client_ip)
                 return
@@ -186,30 +185,25 @@ class TCPUnlockServerBase(AsyncContextDecorator, metaclass=ABCMeta):
         """Given the received data and the sender's ip address, tries to match the unlock requester to
         a registered PCPairing. Return the found pairing if any along with the unlock token.
         Returns (None,None) if none were found"""
-        req_dict = json.loads(data.decode())
-        pairing_id = req_dict["pairingId"]
+        request = PacketUnlockRequest.from_json(data.decode())
 
         for pairing in self.pc_pairings:
-            if pairing_id == pairing.pairing_id:
+            if request.pairing_id == pairing.pairing_id:
                 try:
                     enc_data = decrypt_aes(
-                        bytes.fromhex(req_dict["encData"]), pairing.encryption_key
+                        bytes.fromhex(request.enc_data), pairing.encryption_key
                     )
-                    enc_data = json.loads(enc_data.decode())
-                    # enc_data = self._decrypt_enc_data(
-                    #     req_dict["encData"], pairing.encryption_key
-                    # )
+                    enc_payload = EncryptedUnlockPayload.from_json(enc_data.decode())
                 except Exception as e:
                     raise ValueError(
                         f"Could not decrypt encData from unlock request: {e}"
                     ) from e
-                auth_user = enc_data["authUser"]
 
                 if (
                     desktop_ip_address == pairing.desktop_ip_address
-                    and auth_user == pairing.username
+                    and enc_payload.auth_user == pairing.username
                 ):
-                    return pairing, enc_data["unlockToken"]
+                    return pairing, enc_payload.unlock_token
         return None, None
 
 

@@ -1,13 +1,13 @@
 [project]
 name = "py-pcbu"
-version = "0.3.0"
+version = "0.4.0"
 description = "A package to interact with the PC Bio Unlock credentials module."
 authors = [
     { name = "LM. Garret", email = "lm@codingarret.dev" }
 ]
 dependencies = [
     "py-machineid>=0.6.0",
-    "dataclass-wizard>=0.22.3",
+    "dataclass-wizard>=0.23.0",
     "cryptography>=43.0.1",
 ]
 readme = "README.md"

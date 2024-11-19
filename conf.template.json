@@ -23,6 +23,7 @@
             "server_port": 43296,
             "pairing_id": "abcdef",
             "desktop_ip_address": "192.168.1.Y",
+            "desktop_os": "Windows",
             "encryption_key": "some_super_long_key",
             "username": "user1@desktop",
             "password": "pwd1"
@@ -32,6 +33,7 @@
             "server_port": 43297,
             "pairing_id": "ghijk",
             "desktop_ip_address": "192.168.2.Z",
+            "desktop_os": "Ubuntu",
             "encryption_key": "another_super_long_key",
             "username": "user2@desktop",
             "password": "pwd2"

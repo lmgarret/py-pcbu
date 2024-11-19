@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import Annotated
+from typing import Annotated, Optional
 
 from dataclass_wizard import JSONWizard, json_key
 
@@ -54,6 +54,7 @@ class PCPairing(JSONWizard):
 
     pairing_id: str
     desktop_ip_address: str  # the ip address sending unlock requests, i.e. the desktop
+    desktop_os: str
     server_ip_address: str  # the ip to listen on for unlock requests
     server_port: int  # the port to listen on for unlock requests
 

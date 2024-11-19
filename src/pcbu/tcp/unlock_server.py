@@ -199,9 +199,16 @@ class TCPUnlockServerBase(AsyncContextDecorator, metaclass=ABCMeta):
                         f"Could not decrypt encData from unlock request: {e}"
                     ) from e
 
+                # Windows may give a different case for username on cold boot
+                # see https://github.com/MeisApps/pcbu-desktop/issues/22
+                ignore_case = "windows" in pairing.desktop_os.lower()
                 if (
                     desktop_ip_address == pairing.desktop_ip_address
-                    and enc_payload.auth_user == pairing.username
+                    and (enc_payload.auth_user == pairing.username)
+                    or (
+                        ignore_case
+                        and enc_payload.auth_user.lower() == pairing.username.lower()
+                    )
                 ):
                     return pairing, enc_payload.unlock_token
         return None, None

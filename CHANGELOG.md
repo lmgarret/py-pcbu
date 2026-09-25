@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+- `TCPUnlockServerBase.on_unlock_request_cancelled` hook, called when a desktop drops its pending unlock request
+- `TCPUnlockServerBase.has_pending_unlock_request`
+
+### Fixed
+- Unlock requests for Windows desktops were accepted from any IP address
+- Pending unlock requests are keyed by pairing id, so several pairings sharing a desktop IP no longer overwrite each other
+- Connections are now closed once answered, rejected or when the server exits (exiting could hang)
+- A failed unlock no longer leaves a stale packet writer behind
+- Malformed packets and early disconnects are reported as invalid requests instead of crashing the handler
+- AES key derivation no longer blocks the event loop in the unlock server
 
 ## [0.5.0] - 2024-11-19
 ### Added

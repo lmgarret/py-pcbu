@@ -28,7 +28,16 @@ class UnlockPacketWriter:
         self.pc_pairing = pc_pairing
 
     async def send_unlock_packet(self):
-        await asend(self.writer, self.unlock_response())
+        # key derivation is CPU-heavy, keep it off the event loop
+        data = await asyncio.to_thread(self.unlock_response)
+        await asend(self.writer, data)
+
+    async def close(self):
+        self.writer.close()
+        try:
+            await self.writer.wait_closed()
+        except (ConnectionError, OSError):
+            pass
 
     def unlock_response(self) -> bytes:
         response = PacketUnlockResponse(
@@ -47,8 +56,8 @@ class TCPUnlockServerBase(AsyncContextDecorator, metaclass=ABCMeta):
         self.pc_pairings = pc_pairings
         self._context_stack = AsyncExitStack()
         self._servers: dict[int, Server] = dict()
-        # necessary to decouple unlocking. The int tuple is [server_port, client_ip_addr]
-        self._unlock_packet_writers: dict[Tuple[int, int], UnlockPacketWriter] = dict()
+        # necessary to decouple unlocking. Keyed by pairing_id
+        self._unlock_packet_writers: dict[str, UnlockPacketWriter] = dict()
 
     async def __aenter__(self):
         await self._context_stack.__aenter__()
@@ -69,6 +78,11 @@ class TCPUnlockServerBase(AsyncContextDecorator, metaclass=ABCMeta):
 
     async def __aexit__(self, *exc):
         await self.on_exit()
+        # close pending connections, otherwise the servers never finish closing
+        writers = list(self._unlock_packet_writers.values())
+        self._unlock_packet_writers.clear()
+        for writer in writers:
+            await writer.close()
         await self._context_stack.__aexit__(*exc)
         self._servers = dict()
         LOGGER.info("TCPUnlockServer closed.")
@@ -101,8 +115,16 @@ class TCPUnlockServerBase(AsyncContextDecorator, metaclass=ABCMeta):
     @abstractmethod
     async def on_valid_unlock_request(self, pairing: PCPairing) -> None:
         """Method called whenever an unlock request has been received and authenticated.
-        The return boolean determines whether the password should be sent (encrypted) to the desktop
-        to unlock it."""
+        Call `unlock(pairing)` (now or later) to send the password (encrypted) to the desktop
+        and unlock it."""
+        pass
+
+    async def on_unlock_request_cancelled(self, pairing: PCPairing) -> None:
+        """Method called whenever a pending unlock request can no longer be answered,
+        e.g. the desktop closed the connection before `unlock` was called.
+
+        Can be overridden by the user.
+        """
         pass
 
     async def on_invalid_unlock_request(self, ip: str) -> None:
@@ -119,65 +141,100 @@ class TCPUnlockServerBase(AsyncContextDecorator, metaclass=ABCMeta):
         """Method called whenever the server's context is exited. Can be overriden by user"""
         pass
 
+    def has_pending_unlock_request(self, pairing: PCPairing) -> bool:
+        """Whether an unlock request from this pairing is waiting to be answered."""
+        return pairing.pairing_id in self._unlock_packet_writers
+
     async def unlock(self, pairing: PCPairing):
         """Sends the unlock packet with credentials to the desktop requesting it."""
-        key = (pairing.server_port, pairing.desktop_ip_address)
-        if key not in self._unlock_packet_writers:
+        # can only use it once, even if sending fails
+        writer = self._unlock_packet_writers.pop(pairing.pairing_id, None)
+        if writer is None:
             raise ValueError(
-                f"Cannot send unlock packet to { pairing.desktop_ip_address}: no packet writer was registered for it."
+                f"Cannot send unlock packet to {pairing.desktop_ip_address}: no packet writer was registered for it."
             )
-        writer = self._unlock_packet_writers[key]
-        await writer.send_unlock_packet()
-
-        # can only use it once
-        del self._unlock_packet_writers[key]
+        try:
+            await writer.send_unlock_packet()
+        finally:
+            await writer.close()
 
     def _create_handler(
-        self, ips: str, port: int
+        self, ips: set[str], port: int
     ) -> Callable[[StreamReader, StreamWriter], Awaitable[None] | None]:
         async def handle(reader: StreamReader, writer: StreamWriter):
             # TODO add logging filter so that the ip and port show up in the logs automatically
-
-            LOGGER.debug("Wait for packets...")
-            rcv_data = await areceive(reader)
-            client_ip, client_port = writer.get_extra_info("peername")
-
-            # TODO check that:
-            # 1. the CLOSE instruction is exactly like that (probably should decode)
-            # 2. should close writer here?
-            if rcv_data == b"CLOSE":
-                LOGGER.info(
-                    f"Received a CLOSE message from {client_ip}, restarting listener."
-                )
-                return
-
+            client_ip = writer.get_extra_info("peername")[0]
             try:
-                pairing, unlock_token = self.get_matching_pairing(rcv_data, client_ip)
-                LOGGER.debug("Decrypted & parsed PacketUnlockRequest")
-
-                if pairing is None or unlock_token is None:
-                    raise ValueError(
-                        f"Server listening on {ips}:{port} found no pairing for desktop at {client_ip}."
-                    )
-                LOGGER.info(
-                    f"Received PacketUnlockRequest from {client_ip}, for user {pairing.username}"
-                )
-            except ValueError:
-                LOGGER.exception(
-                    "Could not match client ip and received request with a pairing."
-                )
-                await self.on_invalid_unlock_request(client_ip)
-                return
-
-            # register writer for async unlock request sending
-            self._unlock_packet_writers[
-                (pairing.server_port, pairing.desktop_ip_address)
-            ] = UnlockPacketWriter(
-                unlock_token=unlock_token, pc_pairing=pairing, writer=writer
-            )
-            await self.on_valid_unlock_request(pairing.mask())
+                await self._handle_unlock_request(reader, writer, client_ip, ips, port)
+            finally:
+                writer.close()
 
         return handle
+
+    async def _handle_unlock_request(
+        self,
+        reader: StreamReader,
+        writer: StreamWriter,
+        client_ip: str,
+        ips: set[str],
+        port: int,
+    ):
+        LOGGER.debug("Wait for packets...")
+        try:
+            rcv_data = await areceive(reader)
+        except (asyncio.IncompleteReadError, ConnectionError) as e:
+            LOGGER.debug(f"Connection from {client_ip} closed before a request: {e}")
+            return
+
+        # TODO check that the CLOSE instruction is exactly like that (probably should decode)
+        if rcv_data == b"CLOSE":
+            LOGGER.info(
+                f"Received a CLOSE message from {client_ip}, restarting listener."
+            )
+            return
+
+        try:
+            # key derivation is CPU-heavy, keep it off the event loop
+            pairing, unlock_token = await asyncio.to_thread(
+                self.get_matching_pairing, rcv_data, client_ip
+            )
+            LOGGER.debug("Decrypted & parsed PacketUnlockRequest")
+
+            if pairing is None or unlock_token is None:
+                raise ValueError(
+                    f"Server listening on {ips}:{port} found no pairing for desktop at {client_ip}."
+                )
+            LOGGER.info(
+                f"Received PacketUnlockRequest from {client_ip}, for user {pairing.username}"
+            )
+        except Exception:
+            LOGGER.exception(
+                "Could not match client ip and received request with a pairing."
+            )
+            await self.on_invalid_unlock_request(client_ip)
+            return
+
+        # register writer for async unlock request sending, replacing any stale one
+        packet_writer = UnlockPacketWriter(
+            unlock_token=unlock_token, pc_pairing=pairing, writer=writer
+        )
+        previous = self._unlock_packet_writers.pop(pairing.pairing_id, None)
+        self._unlock_packet_writers[pairing.pairing_id] = packet_writer
+        if previous is not None:
+            await previous.close()
+        await self.on_valid_unlock_request(pairing.mask())
+
+        # wait for the connection to end: either the desktop gave up, or we closed it after unlocking
+        try:
+            while await reader.read(1024):
+                pass
+        except ConnectionError:
+            pass
+
+        if self._unlock_packet_writers.get(pairing.pairing_id) is packet_writer:
+            del self._unlock_packet_writers[pairing.pairing_id]
+            LOGGER.info(f"Desktop at {client_ip} closed its pending unlock request.")
+            await self.on_unlock_request_cancelled(pairing.mask())
 
     def get_matching_pairing(
         self, data: bytes, desktop_ip_address: str
@@ -202,13 +259,13 @@ class TCPUnlockServerBase(AsyncContextDecorator, metaclass=ABCMeta):
                 # Windows may give a different case for username on cold boot
                 # see https://github.com/MeisApps/pcbu-desktop/issues/22
                 ignore_case = "windows" in pairing.desktop_os.lower()
+                username_matches = enc_payload.auth_user == pairing.username or (
+                    ignore_case
+                    and enc_payload.auth_user.lower() == pairing.username.lower()
+                )
                 if (
                     desktop_ip_address == pairing.desktop_ip_address
-                    and (enc_payload.auth_user == pairing.username)
-                    or (
-                        ignore_case
-                        and enc_payload.auth_user.lower() == pairing.username.lower()
-                    )
+                    and username_matches
                 ):
                     return pairing, enc_payload.unlock_token
         return None, None

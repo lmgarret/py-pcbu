@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A failed unlock no longer leaves a stale packet writer behind
 - Malformed packets and early disconnects are reported as invalid requests instead of crashing the handler
 - AES key derivation no longer blocks the event loop in the unlock server
+- `TCPPairClient.pair` and `TCPUnlockClient.unlock` could wait forever for a response: the timeout now also applies to it
+- Client connections are now closed once done
 
 ## [0.5.0] - 2024-11-19
 ### Added

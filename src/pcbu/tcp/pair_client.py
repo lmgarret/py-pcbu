@@ -32,29 +32,32 @@ class TCPPairClient:
             timeout=timeout,
         )
 
-        LOGGER.info(
-            f"Connected to {self.pairing_qr_data.ip}:{self.pairing_qr_data.port}"
-        )
+        try:
+            LOGGER.info(
+                f"Connected to {self.pairing_qr_data.ip}:{self.pairing_qr_data.port}"
+            )
 
-        LOGGER.debug("Send PackerPairInit...")
-        packet_pair_init = PacketPairInit.from_dict(
-            {
-                "deviceUUID": self.machine_uuid,
-                "deviceName": self.device_name,
-                "ipAddress": self.ip_address,
-            }
-        )
-        snd_data = packet_pair_init.to_json().encode()
-        snd_enc_data = encrypt_aes(snd_data, self.pairing_qr_data.enc_key)
-        await asend(writer=writer, data=snd_enc_data)
-        LOGGER.debug("Sent PackerPairInit")
+            LOGGER.debug("Send PackerPairInit...")
+            packet_pair_init = PacketPairInit.from_dict(
+                {
+                    "deviceUUID": self.machine_uuid,
+                    "deviceName": self.device_name,
+                    "ipAddress": self.ip_address,
+                }
+            )
+            snd_data = packet_pair_init.to_json().encode()
+            snd_enc_data = encrypt_aes(snd_data, self.pairing_qr_data.enc_key)
+            await asend(writer=writer, data=snd_enc_data)
+            LOGGER.debug("Sent PackerPairInit")
 
-        LOGGER.debug("Wait for PacketPairResponse...")
-        rcv_data = await areceive(reader)
-        LOGGER.debug("Received PacketPairResponse")
-        data = decrypt_aes(rcv_data, self.pairing_qr_data.enc_key)
-        LOGGER.debug("Decrypted PacketPairResponse")
-        response = PacketPairResponse.from_json(data)
-        LOGGER.debug("Parsed PacketPairResponse")
+            LOGGER.debug("Wait for PacketPairResponse...")
+            rcv_data = await asyncio.wait_for(areceive(reader), timeout=timeout)
+            LOGGER.debug("Received PacketPairResponse")
+            data = decrypt_aes(rcv_data, self.pairing_qr_data.enc_key)
+            LOGGER.debug("Decrypted PacketPairResponse")
+            response = PacketPairResponse.from_json(data)
+            LOGGER.debug("Parsed PacketPairResponse")
 
-        return response
+            return response
+        finally:
+            writer.close()

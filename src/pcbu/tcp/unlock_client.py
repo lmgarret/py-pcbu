@@ -31,33 +31,36 @@ class TCPUnlockClient:
             timeout=timeout,
         )
 
-        LOGGER.info(
-            f"Connected to {self.pairing.server_ip_address}:{self.pairing.server_port}"
-        )
+        try:
+            LOGGER.info(
+                f"Connected to {self.pairing.server_ip_address}:{self.pairing.server_port}"
+            )
 
-        LOGGER.debug("Send PacketUnlockRequest...")
-        unlock_token = str(
-            uuid.uuid4()
-        )  # TODO check that this is a valid and secure way to generate the token
-        unlock_req_payload = EncryptedUnlockPayload(
-            auth_user=self.pairing.username, unlock_token=unlock_token
-        )
-        packet_unlock_req = PacketUnlockRequest(
-            pairing_id=self.pairing.pairing_id,
-            enc_data=encrypt_aes(
-                unlock_req_payload.to_json().encode(), self.pairing.encryption_key
-            ).hex(),
-        )
+            LOGGER.debug("Send PacketUnlockRequest...")
+            unlock_token = str(
+                uuid.uuid4()
+            )  # TODO check that this is a valid and secure way to generate the token
+            unlock_req_payload = EncryptedUnlockPayload(
+                auth_user=self.pairing.username, unlock_token=unlock_token
+            )
+            packet_unlock_req = PacketUnlockRequest(
+                pairing_id=self.pairing.pairing_id,
+                enc_data=encrypt_aes(
+                    unlock_req_payload.to_json().encode(), self.pairing.encryption_key
+                ).hex(),
+            )
 
-        await asend(writer=writer, data=packet_unlock_req.to_json().encode())
-        LOGGER.debug("Sent PacketUnlockRequest")
+            await asend(writer=writer, data=packet_unlock_req.to_json().encode())
+            LOGGER.debug("Sent PacketUnlockRequest")
 
-        LOGGER.debug("Wait for PacketUnlockResponse...")
-        rcv_data = await areceive(reader)
-        LOGGER.debug("Received PacketUnlockResponse")
-        data = decrypt_aes(rcv_data, self.pairing.encryption_key)
-        LOGGER.debug("Decrypted PacketUnlockResponse")
-        response = PacketUnlockResponse.from_json(data)
-        LOGGER.debug("Parsed PacketUnlockResponse")
+            LOGGER.debug("Wait for PacketUnlockResponse...")
+            rcv_data = await asyncio.wait_for(areceive(reader), timeout=timeout)
+            LOGGER.debug("Received PacketUnlockResponse")
+            data = decrypt_aes(rcv_data, self.pairing.encryption_key)
+            LOGGER.debug("Decrypted PacketUnlockResponse")
+            response = PacketUnlockResponse.from_json(data)
+            LOGGER.debug("Parsed PacketUnlockResponse")
 
-        return response
+            return response
+        finally:
+            writer.close()

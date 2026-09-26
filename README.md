@@ -63,7 +63,7 @@ python -m pcbu unlock-server
 from pcbu.models import PCPairing, PCPairingSecret
 from pcbu.tcp.unlock_server import TCPUnlockServer
 
-pairings_dicts =   [
+pairings_dicts = [
     {
         "server_ip_address": "192.168.1.Y",
         "server_port": 43296,
@@ -71,7 +71,7 @@ pairings_dicts =   [
         "desktop_ip_address": "192.168.1.Y",
         "encryption_key": "some_super_long_key",
         "username": "user1@desktop",
-        "password": "pwd1"
+        "password": "pwd1",
     },
     {
         "server_ip_address": "192.168.1.Y",
@@ -80,8 +80,8 @@ pairings_dicts =   [
         "desktop_ip_address": "192.168.2.Z",
         "encryption_key": "another_super_long_key",
         "username": "user2@desktop",
-        "password": "pwd2"
-    }
+        "password": "pwd2",
+    },
 ]
 pc_pairings = [PCPairingSecret.from_dict(d) for d in pairing_dicts]
 

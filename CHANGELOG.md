@@ -6,12 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [0.7.0] - 2026-09-26
 ### Added
+- `pcbu.models.PCBUModel` base class: subclass it for models nested in py-pcbu ones, so they load and dump keys alike
+- `pcbu.errors`: `PairingError` raised by `TCPPairClient.pair` when the desktop refuses the pairing or closes the connection, `UnlockRejectedError` raised by `TCPUnlockClient.unlock` when the server closes the connection without answering
 - Test suite, and a CI running lint, formatting and tests on Python 3.11 to 3.13; releases only publish when it passes
 - `py.typed` marker
 - Dependabot for GitHub Actions and uv dependencies
 
 ### Changed
+- **Requires dataclass-wizard 1.x.** Models load keys in any case and dump them in camelCase, as before; the aliased keys (`deviceUUID`, `hostOS`, `username`) are now also used when dumping
 - Requires Python 3.11 or newer (the declared 3.8 minimum was wrong: `asyncio.TaskGroup` is used)
 - Logging uses lazy `%` formatting
 
@@ -99,7 +104,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Initial release!
 
-[Unreleased]: https://github.com/lmgarret/py-pcbu/compare/0.6.1...HEAD
+[Unreleased]: https://github.com/lmgarret/py-pcbu/compare/0.7.0...HEAD
+[0.7.0]: https://github.com/lmgarret/py-pcbu/compare/0.6.1...0.7.0
 [0.6.1]: https://github.com/lmgarret/py-pcbu/compare/0.6.0...0.6.1
 [0.6.0]: https://github.com/lmgarret/py-pcbu/compare/0.5.0...0.6.0
 [0.5.0]: https://github.com/lmgarret/py-pcbu/compare/0.4.1...0.5.0

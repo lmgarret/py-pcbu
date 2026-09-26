@@ -3,6 +3,7 @@ import logging
 import platform
 
 from pcbu.crypto import decrypt_aes, encrypt_aes
+from pcbu.errors import PairingError
 from pcbu.helpers import get_ip, get_uuid
 from pcbu.models import PacketPairInit, PacketPairResponse, PairingQRData
 from pcbu.tcp.common import areceive, asend
@@ -50,12 +51,19 @@ class TCPPairClient:
             LOGGER.debug("Sent PackerPairInit")
 
             LOGGER.debug("Wait for PacketPairResponse...")
-            rcv_data = await asyncio.wait_for(areceive(reader), timeout=timeout)
+            try:
+                rcv_data = await asyncio.wait_for(areceive(reader), timeout=timeout)
+            except asyncio.IncompleteReadError as e:
+                raise PairingError(
+                    "The desktop closed the connection without answering"
+                ) from e
             LOGGER.debug("Received PacketPairResponse")
             data = decrypt_aes(rcv_data, self.pairing_qr_data.enc_key)
             LOGGER.debug("Decrypted PacketPairResponse")
             response = PacketPairResponse.from_json(data)
             LOGGER.debug("Parsed PacketPairResponse")
+            if response.err_msg:
+                raise PairingError(response.err_msg)
 
             return response
         finally:

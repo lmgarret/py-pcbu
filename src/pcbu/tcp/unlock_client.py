@@ -3,6 +3,7 @@ import logging
 import uuid
 
 from pcbu.crypto import decrypt_aes, encrypt_aes
+from pcbu.errors import UnlockRejectedError
 from pcbu.models import (
     EncryptedUnlockPayload,
     PacketUnlockRequest,
@@ -56,7 +57,12 @@ class TCPUnlockClient:
             LOGGER.debug("Sent PacketUnlockRequest")
 
             LOGGER.debug("Wait for PacketUnlockResponse...")
-            rcv_data = await asyncio.wait_for(areceive(reader), timeout=timeout)
+            try:
+                rcv_data = await asyncio.wait_for(areceive(reader), timeout=timeout)
+            except asyncio.IncompleteReadError as e:
+                raise UnlockRejectedError(
+                    "The unlock server closed the connection without answering"
+                ) from e
             LOGGER.debug("Received PacketUnlockResponse")
             data = decrypt_aes(rcv_data, self.pairing.encryption_key)
             LOGGER.debug("Decrypted PacketUnlockResponse")

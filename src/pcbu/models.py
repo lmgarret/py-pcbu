@@ -2,7 +2,20 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Annotated
 
-from dataclass_wizard import JSONWizard, json_key
+from dataclass_wizard import Alias, JSONWizard
+
+
+class PCBUModel(JSONWizard):
+    """Base of all the models: loads keys in any case (the desktop app uses camelCase)
+    and dumps them in camelCase.
+
+    Subclass it for models nested in these ones, so that they load and dump alike.
+    """
+
+    def __init_subclass__(cls, **kwargs):
+        kwargs.setdefault("load_case", "AUTO")
+        kwargs.setdefault("dump_case", "CAMEL")
+        super().__init_subclass__(**kwargs)
 
 
 class PairingMethod(Enum):
@@ -12,7 +25,7 @@ class PairingMethod(Enum):
 
 
 @dataclass
-class PairingQRData(JSONWizard):
+class PairingQRData(PCBUModel):
     """Pairing data encoded in the QR code shown in the desktop app when pairing"""
 
     ip: str
@@ -22,10 +35,10 @@ class PairingQRData(JSONWizard):
 
 
 @dataclass
-class PacketPairInit(JSONWizard):
+class PacketPairInit(PCBUModel):
     """Initial packet sent by the client to the desktop to start the pairing process"""
 
-    device_uuid: Annotated[str, json_key("deviceUUID", all=True)]
+    device_uuid: Annotated[str, Alias("deviceUUID", "device_uuid")]
     ip_address: str
     device_name: str
     proto_version: str = "1.3.0"
@@ -33,23 +46,23 @@ class PacketPairInit(JSONWizard):
 
 
 @dataclass
-class PacketPairResponse(JSONWizard):
+class PacketPairResponse(PCBUModel):
     """Response from the desktop to the PacketPairInit"""
 
     err_msg: str
     pairing_id: str
     pairing_method: PairingMethod
     host_name: str
-    host_os: Annotated[str, json_key("hostOS", all=True)]
+    host_os: Annotated[str, Alias("hostOS", "host_os")]
     host_address: str
     host_port: int
     mac_address: str
-    user_name: Annotated[str, json_key("username")]
+    user_name: Annotated[str, Alias("username", "user_name", "userName")]
     password: str
 
 
 @dataclass
-class PCPairing(JSONWizard):
+class PCPairing(PCBUModel):
     """Model reprensenting a desktop (unlock-client) paired with a (unlock-server)"""
 
     pairing_id: str
@@ -73,13 +86,13 @@ class PCPairingSecret(PCPairing):
 
 
 @dataclass
-class PacketUnlockRequest(JSONWizard):
+class PacketUnlockRequest(PCBUModel):
     pairing_id: str
     enc_data: str  # an EncryptedUnlockPayload, encrypted of course
 
 
 @dataclass
-class EncryptedUnlockPayload(JSONWizard):
+class EncryptedUnlockPayload(PCBUModel):
     """Model for PacketUnlockRequest.enc_data once decrypted"""
 
     auth_user: str
@@ -87,6 +100,6 @@ class EncryptedUnlockPayload(JSONWizard):
 
 
 @dataclass
-class PacketUnlockResponse(JSONWizard):
+class PacketUnlockResponse(PCBUModel):
     unlock_token: str
     password: str  # SENSITIVE! The account's password

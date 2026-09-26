@@ -4,6 +4,7 @@ import contextlib
 import pytest
 
 from pcbu.crypto import encrypt_aes
+from pcbu.errors import UnlockRejectedError
 from pcbu.models import EncryptedUnlockPayload, PacketUnlockRequest, PCPairing
 from pcbu.tcp.common import asend
 from pcbu.tcp.unlock_client import TCPUnlockClient
@@ -171,7 +172,7 @@ async def test_exit_with_pending_request(make_pairing):
         request = asyncio.create_task(TCPUnlockClient(pairing).unlock(timeout=5))
         await until(lambda: server.valid == ["a"])
     # exiting closed the pending connection instead of hanging, and cancelled it
-    with pytest.raises(asyncio.IncompleteReadError):
+    with pytest.raises(UnlockRejectedError):
         await asyncio.wait_for(request, 5)
     assert server.cancelled == ["a"]
 
@@ -192,3 +193,11 @@ async def test_client_timeout(port, make_pairing):
     async with server:
         with pytest.raises(TimeoutError):
             await TCPUnlockClient(make_pairing()).unlock(timeout=0.5)
+
+
+async def test_client_rejected(make_pairing):
+    pairing = make_pairing()
+    async with running(RecordingServer([pairing])) as server:
+        with pytest.raises(UnlockRejectedError):
+            await TCPUnlockClient(make_pairing(key="wrong")).unlock(timeout=5)
+        assert server.invalid == ["127.0.0.1"]

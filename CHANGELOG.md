@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-09-26
+### Fixed
+- Importing `pcbu` failed with dataclass-wizard 1.0 (`json_key` was removed): dataclass-wizard is now limited to `<1`
+
 ## [0.6.0] - 2026-09-25
 ### Added
 - `TCPUnlockServerBase.on_unlock_request_cancelled` hook, called when a desktop drops its pending unlock request
@@ -83,7 +87,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Initial release!
 
-[Unreleased]: https://github.com/lmgarret/py-pcbu/compare/0.6.0...HEAD
+[Unreleased]: https://github.com/lmgarret/py-pcbu/compare/0.6.1...HEAD
+[0.6.1]: https://github.com/lmgarret/py-pcbu/compare/0.6.0...0.6.1
 [0.6.0]: https://github.com/lmgarret/py-pcbu/compare/0.5.0...0.6.0
 [0.5.0]: https://github.com/lmgarret/py-pcbu/compare/0.4.1...0.5.0
 [0.4.1]: https://github.com/lmgarret/py-pcbu/compare/0.4.0...0.4.1

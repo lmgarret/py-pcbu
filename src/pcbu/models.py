@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import Annotated, Optional
+from typing import Annotated
 
 from dataclass_wizard import JSONWizard, json_key
 

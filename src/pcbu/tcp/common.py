@@ -1,5 +1,5 @@
-from asyncio import StreamReader, StreamWriter
 import logging
+from asyncio import StreamReader, StreamWriter
 
 LOGGER = logging.getLogger(__name__)
 
@@ -15,7 +15,7 @@ async def areceive(reader: StreamReader) -> bytes:
     if payload_size == 0:
         LOGGER.debug("Empty packet received")
         return b""
-    LOGGER.debug(f"Expecting next payload size of {payload_size} bytes")
+    LOGGER.debug("Expecting next payload size of %s bytes", payload_size)
 
     # return actual payload
     return await reader.readexactly(payload_size)

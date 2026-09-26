@@ -1,10 +1,10 @@
+import asyncio
+import logging
 from abc import ABCMeta, abstractmethod
 from asyncio import Server, StreamReader, StreamWriter
-import asyncio
-from collections.abc import Callable
-from contextlib import AsyncContextDecorator, AsyncExitStack
-import logging
-from typing import Any, Awaitable, Coroutine, Optional, Tuple
+from collections.abc import Awaitable, Callable, Coroutine
+from contextlib import AsyncContextDecorator, AsyncExitStack, suppress
+from typing import Any
 
 from pcbu.crypto import decrypt_aes, encrypt_aes
 from pcbu.models import (
@@ -34,10 +34,8 @@ class UnlockPacketWriter:
 
     async def close(self):
         self.writer.close()
-        try:
+        with suppress(ConnectionError, OSError):
             await self.writer.wait_closed()
-        except (ConnectionError, OSError):
-            pass
 
     def unlock_response(self) -> bytes:
         response = PacketUnlockResponse(
@@ -58,6 +56,8 @@ class TCPUnlockServerBase(AsyncContextDecorator, metaclass=ABCMeta):
         self._servers: dict[int, Server] = dict()
         # necessary to decouple unlocking. Keyed by pairing_id
         self._unlock_packet_writers: dict[str, UnlockPacketWriter] = dict()
+        # every open connection, closed when the server stops
+        self._connections: set[StreamWriter] = set()
 
     async def __aenter__(self):
         await self._context_stack.__aenter__()
@@ -67,7 +67,7 @@ class TCPUnlockServerBase(AsyncContextDecorator, metaclass=ABCMeta):
                 for pair in self.pc_pairings
                 if pair.server_port == port
             }
-            LOGGER.info(f"Binding TCPUnlockServer to {ips}:{port}")
+            LOGGER.info("Binding TCPUnlockServer to %s:%s", ips, port)
             server = await asyncio.start_server(
                 self._create_handler(ips, port), list(ips), port
             )
@@ -78,11 +78,8 @@ class TCPUnlockServerBase(AsyncContextDecorator, metaclass=ABCMeta):
 
     async def __aexit__(self, *exc):
         await self.on_exit()
-        # close pending connections, otherwise the servers never finish closing
-        writers = list(self._unlock_packet_writers.values())
-        self._unlock_packet_writers.clear()
-        for writer in writers:
-            await writer.close()
+        # the servers wait for their connections before they finish closing
+        self._close_connections()
         await self._context_stack.__aexit__(*exc)
         self._servers = dict()
         LOGGER.info("TCPUnlockServer closed.")
@@ -96,9 +93,18 @@ class TCPUnlockServerBase(AsyncContextDecorator, metaclass=ABCMeta):
 
         await self.on_start()
 
-        async with asyncio.TaskGroup() as tg:
-            for s in self._servers.values():
-                tg.create_task(s.serve_forever())
+        # the servers accept connections since they were entered. Not using
+        # Server.serve_forever(): on Python >= 3.12, cancelling it waits for every
+        # connection to close, which pending unlock requests never do.
+        try:
+            await asyncio.Event().wait()
+        finally:
+            self._close_connections()
+
+    def _close_connections(self):
+        """Closes every open connection. Pending unlock requests are then cancelled."""
+        for writer in list(self._connections):
+            writer.close()
 
     async def on_enter(self) -> bool:
         """Method called whenever the server's context is entered.
@@ -164,9 +170,11 @@ class TCPUnlockServerBase(AsyncContextDecorator, metaclass=ABCMeta):
         async def handle(reader: StreamReader, writer: StreamWriter):
             # TODO add logging filter so that the ip and port show up in the logs automatically
             client_ip = writer.get_extra_info("peername")[0]
+            self._connections.add(writer)
             try:
                 await self._handle_unlock_request(reader, writer, client_ip, ips, port)
             finally:
+                self._connections.discard(writer)
                 writer.close()
 
         return handle
@@ -183,13 +191,13 @@ class TCPUnlockServerBase(AsyncContextDecorator, metaclass=ABCMeta):
         try:
             rcv_data = await areceive(reader)
         except (asyncio.IncompleteReadError, ConnectionError) as e:
-            LOGGER.debug(f"Connection from {client_ip} closed before a request: {e}")
+            LOGGER.debug("Connection from %s closed before a request: %s", client_ip, e)
             return
 
         # TODO check that the CLOSE instruction is exactly like that (probably should decode)
         if rcv_data == b"CLOSE":
             LOGGER.info(
-                f"Received a CLOSE message from {client_ip}, restarting listener."
+                "Received a CLOSE message from %s, restarting listener.", client_ip
             )
             return
 
@@ -205,7 +213,9 @@ class TCPUnlockServerBase(AsyncContextDecorator, metaclass=ABCMeta):
                     f"Server listening on {ips}:{port} found no pairing for desktop at {client_ip}."
                 )
             LOGGER.info(
-                f"Received PacketUnlockRequest from {client_ip}, for user {pairing.username}"
+                "Received PacketUnlockRequest from %s, for user %s",
+                client_ip,
+                pairing.username,
             )
         except Exception:
             LOGGER.exception(
@@ -233,12 +243,12 @@ class TCPUnlockServerBase(AsyncContextDecorator, metaclass=ABCMeta):
 
         if self._unlock_packet_writers.get(pairing.pairing_id) is packet_writer:
             del self._unlock_packet_writers[pairing.pairing_id]
-            LOGGER.info(f"Desktop at {client_ip} closed its pending unlock request.")
+            LOGGER.info("Desktop at %s closed its pending unlock request.", client_ip)
             await self.on_unlock_request_cancelled(pairing.mask())
 
     def get_matching_pairing(
         self, data: bytes, desktop_ip_address: str
-    ) -> Tuple[Optional[PCPairingSecret], Optional[str]]:
+    ) -> tuple[PCPairingSecret | None, str | None]:
         """Given the received data and the sender's ip address, tries to match the unlock requester to
         a registered PCPairing. Return the found pairing if any along with the unlock token.
         Returns (None,None) if none were found"""

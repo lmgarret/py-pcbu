@@ -11,13 +11,13 @@ dependencies = [
     "cryptography>=43.0.1",
 ]
 readme = "README.md"
-requires-python = ">= 3.8"
+requires-python = ">=3.11"
 
 [project.urls]
 Homepage = "https://github.com/lmgarret/py-pcbu"
 Repository = "https://github.com/lmgarret/py-pcbu.git"
 Issues = "https://github.com/lmgarret/py-pcbu/issues"
-Changelog = "https://github.com/lmgarret/py-pcbu/blob/master/CHANGELOG.md"
+Changelog = "https://github.com/lmgarret/py-pcbu/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 cli = [
@@ -45,4 +45,36 @@ include = [
 ]
 exclude = [
   ".vscode",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "ruff>=0.8",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 88
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle
+    "F",   # pyflakes
+    "W",   # pycodestyle warnings
+    "I",   # isort
+    "UP",  # pyupgrade
+    "B",   # bugbear
+    "G",   # logging format
+    "SIM", # simplify
+    "RUF", # ruff-specific
+]
+ignore = [
+    "E501", # line length, handled by the formatter
 ]

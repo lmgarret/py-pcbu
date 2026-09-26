@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+- Test suite, and a CI running lint, formatting and tests on Python 3.11 to 3.13; releases only publish when it passes
+- `py.typed` marker
+- Dependabot for GitHub Actions and uv dependencies
+
+### Changed
+- Requires Python 3.11 or newer (the declared 3.8 minimum was wrong: `asyncio.TaskGroup` is used)
+- Logging uses lazy `%` formatting
+
+### Fixed
+- On Python 3.12 or newer, stopping the unlock server hung while a desktop had a pending unlock request, or any connection was open. Open connections are now closed on stop, which cancels pending requests
+- The pair server never closed its connections, so it could not stop on Python 3.12 or newer
 
 ## [0.6.1] - 2026-09-26
 ### Fixed

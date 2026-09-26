@@ -1,11 +1,10 @@
 import asyncio
 import logging
 import platform
-from typing import Optional
 
 from pcbu.crypto import decrypt_aes, encrypt_aes
-from pcbu.models import PacketPairInit, PacketPairResponse, PairingQRData
 from pcbu.helpers import get_ip, get_uuid
+from pcbu.models import PacketPairInit, PacketPairResponse, PairingQRData
 from pcbu.tcp.common import areceive, asend
 
 LOGGER = logging.getLogger(__name__)
@@ -17,9 +16,9 @@ class TCPPairClient:
     def __init__(
         self,
         pairing_qr_data: PairingQRData,
-        device_name: Optional[str] = None,
-        ip_address: Optional[str] = None,
-        machine_uuid: Optional[str] = None,
+        device_name: str | None = None,
+        ip_address: str | None = None,
+        machine_uuid: str | None = None,
     ) -> None:
         self.pairing_qr_data = pairing_qr_data
         self.device_name = device_name or platform.node()
@@ -34,7 +33,7 @@ class TCPPairClient:
 
         try:
             LOGGER.info(
-                f"Connected to {self.pairing_qr_data.ip}:{self.pairing_qr_data.port}"
+                "Connected to %s:%s", self.pairing_qr_data.ip, self.pairing_qr_data.port
             )
 
             LOGGER.debug("Send PackerPairInit...")

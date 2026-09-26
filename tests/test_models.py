@@ -1,9 +1,11 @@
 import json
+from pathlib import Path
 
 from pcbu.models import (
     PacketPairInit,
     PacketPairResponse,
     PairingMethod,
+    PairingQRData,
     PCPairing,
     PCPairingSecret,
 )
@@ -53,3 +55,61 @@ def test_mask_drops_secrets(make_pairing):
     assert type(masked) is PCPairing
     assert not hasattr(masked, "password")
     assert not hasattr(masked, "encryption_key")
+
+
+def test_pair_response_dumps_protocol_keys():
+    response = PacketPairResponse.from_json(
+        json.dumps(
+            {
+                "errMsg": "",
+                "pairingId": "id",
+                "pairingMethod": "TCP",
+                "hostName": "desktop",
+                "hostOS": "Windows",
+                "hostAddress": "1.2.3.4",
+                "hostPort": 43296,
+                "macAddress": "AA:BB",
+                "username": "user",
+                "password": "pwd",
+            }
+        )
+    )
+    data = json.loads(response.to_json())
+    assert data["hostOS"] == "Windows"
+    assert data["username"] == "user"
+    assert data["pairingMethod"] == "TCP"
+
+
+def test_load_snake_case_keys(make_pairing):
+    """conf.local.json files may use snake_case keys."""
+    pairing = make_pairing()
+    assert (
+        PCPairingSecret.from_dict(
+            {
+                "pairing_id": "a",
+                "desktop_ip_address": "127.0.0.1",
+                "desktop_os": "Linux",
+                "server_ip_address": "127.0.0.1",
+                "server_port": pairing.server_port,
+                "username": "user",
+                "password": "pwd-a",
+                "encryption_key": "key",
+            }
+        )
+        == pairing
+    )
+
+
+def test_load_template_conf():
+    """The CLI's conf.template.json mixes camelCase and snake_case keys."""
+    conf = json.loads((Path(__file__).parent.parent / "conf.template.json").read_text())
+    assert (
+        PairingQRData.from_dict(conf["pairing_data"]).enc_key == "some_super_long_key"
+    )
+    response = PacketPairResponse.from_dict(conf["pairing_response"])
+    assert response.host_os == "Some OS"
+    assert response.user_name == "user1@desktop"
+    assert [PCPairingSecret.from_dict(p).desktop_os for p in conf["paired_pcs"]] == [
+        "Windows",
+        "Ubuntu",
+    ]

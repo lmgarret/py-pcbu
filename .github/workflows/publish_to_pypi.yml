@@ -4,6 +4,7 @@ on:
   push:
     branches:
     - main
+  workflow_dispatch:
 
 jobs:
   version-check:
@@ -11,49 +12,45 @@ jobs:
     runs-on: ubuntu-latest
 
     outputs:
-      is_version_greater: ${{ steps.pyproject-version.outputs.is_version_greater }}
+      is_new_version: ${{ steps.pyproject-version.outputs.is_new_version }}
       version: ${{ steps.pyproject-version.outputs.version }}
     steps:
-    - uses: raven-wing/did-python-package-version-change@v1
-      id: pyproject-version
-
-  changelog:
-    name: Parse version's changelog
-    needs: version-check
-    runs-on: ubuntu-latest
-
-    outputs:
-      changes: ${{ steps.changelog.outputs.description }}
-
-    steps:
     - name: Checkout the repository
-      uses: actions/checkout@main
-    - name: Parse Changelog Entry
-      id: changelog
-      uses: coditory/changelog-parser@v1
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
-        version: ${{ needs.version-check.outputs.version }}
+        fetch-depth: 0  # fetch tags
+    - name: Check whether this version was already released
+      id: pyproject-version
+      run: |
+        version=$(grep -E '^version' pyproject.toml | cut -d '"' -f 2)
+        echo "version=$version" >> "$GITHUB_OUTPUT"
+        if git rev-parse -q --verify "refs/tags/$version" > /dev/null; then
+          echo "Version $version is already released"
+          echo "is_new_version=false" >> "$GITHUB_OUTPUT"
+        else
+          echo "Version $version is new"
+          echo "is_new_version=true" >> "$GITHUB_OUTPUT"
+        fi
 
   build:
     name: Build dist
     runs-on: ubuntu-latest
-    
-    # run only if the version has changed
+
+    # run only if the version has not been released yet
     needs: version-check
-    if: needs.version-check.outputs.is_version_greater == 'true'
+    if: needs.version-check.outputs.is_new_version == 'true'
 
     steps:
     - name: Checkout the repository
-      uses: actions/checkout@main
-    - name: Install the latest version of uv
-      uses: astral-sh/setup-uv@v1
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+    - name: Install uv
+      uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
       with:
-        enable-cache: true
-        version: "0.4.5"
+        version: "0.12.19"
     - name: Build the distribution packages
       run: uv build
     - name: Store the distribution packages
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: python-package-distributions
         path: dist/
@@ -63,7 +60,6 @@ jobs:
     needs:
     - build
     - version-check
-    - changelog
     runs-on: ubuntu-latest
 
     permissions:
@@ -71,23 +67,34 @@ jobs:
       id-token: write  # IMPORTANT: mandatory for sigstore
 
     steps:
+    - name: Checkout the repository
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+    - name: Extract the version's changelog entry
+      env:
+        VERSION: ${{ needs.version-check.outputs.version }}
+      run: |
+        awk -v header="## [$VERSION]" '
+          /^## \[/ { in_section = (index($0, header) == 1); next }
+          /^\[.*\]: / { next }
+          in_section
+        ' CHANGELOG.md > release-notes.md
+        cat release-notes.md
     - name: Download all the dists
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
       with:
         name: python-package-distributions
         path: dist/
     - name: Sign the dists with Sigstore
-      uses: sigstore/gh-action-sigstore-python@v2.1.1
+      uses: sigstore/gh-action-sigstore-python@790bc6befb9d733738f18d8f895854b453640ec9 # v3.5.0
       with:
         inputs: >-
           ./dist/*.tar.gz
           ./dist/*.whl
-  
     - name: Release
-      uses: softprops/action-gh-release@v2
+      uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
       with:
         tag_name: ${{ needs.version-check.outputs.version }}
-        body: ${{ needs.changelog.outputs.changes }}
+        body_path: release-notes.md
         files: dist/**
 
   publish-to-testpypi:
@@ -105,12 +112,12 @@ jobs:
 
     steps:
     - name: Download all the dists
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
       with:
         name: python-package-distributions
         path: dist/
     - name: Publish dists to TestPyPI
-      uses: pypa/gh-action-pypi-publish@release/v1
+      uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
       with:
         repository-url: https://test.pypi.org/legacy/
 
@@ -130,9 +137,9 @@ jobs:
 
     steps:
     - name: Download all the dists
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
       with:
         name: python-package-distributions
         path: dist/
     - name: Publish dists to PyPI
-      uses: pypa/gh-action-pypi-publish@release/v1
+      uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2

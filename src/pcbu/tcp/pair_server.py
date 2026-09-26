@@ -1,7 +1,7 @@
-from asyncio import StreamReader, StreamWriter
 import asyncio
-from contextlib import AsyncContextDecorator
 import logging
+from asyncio import StreamReader, StreamWriter
+from contextlib import AsyncContextDecorator
 
 from pcbu.crypto import decrypt_aes, encrypt_aes
 from pcbu.models import PacketPairInit, PacketPairResponse, PairingQRData
@@ -26,7 +26,7 @@ class TCPPairServer(AsyncContextDecorator):
         ip = self.pairing_qr_data.ip
         port = self.pairing_qr_data.port
         self._server = await asyncio.start_server(self._handle, ip, port)
-        LOGGER.info(f"Binding TCPPairServer to {ip}:{port}")
+        LOGGER.info("Binding TCPPairServer to %s:%s", ip, port)
         await self._server.__aenter__()
         return self
 
@@ -61,7 +61,9 @@ class TCPPairServer(AsyncContextDecorator):
             snd_enc_data = encrypt_aes(snd_data, self.pairing_qr_data.enc_key)
             await asend(writer, snd_enc_data)
             LOGGER.debug("Sent PacketPairResponse")
-            LOGGER.info(f"Successfully paired with {packet_pair_init.device_name}!")
+            LOGGER.info("Successfully paired with %s!", packet_pair_init.device_name)
 
         except Exception:
             LOGGER.exception("Error handling connection")
+        finally:
+            writer.close()

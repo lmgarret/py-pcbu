@@ -1,23 +1,24 @@
 import asyncio
 import io
 import json
-from pathlib import Path
-from typing import Annotated, Any, Optional
-import typer
 import logging
+from pathlib import Path
+from typing import Annotated, Any
+
+import typer
+from qrcode.main import QRCode
+
 from pcbu.helpers import get_ip
 from pcbu.models import (
-    PCPairingSecret,
+    PacketPairResponse,
     PacketUnlockResponse,
     PairingQRData,
-    PacketPairResponse,
+    PCPairingSecret,
 )
 from pcbu.tcp.pair_client import TCPPairClient
 from pcbu.tcp.pair_server import TCPPairServer
 from pcbu.tcp.unlock_client import TCPUnlockClient
 from pcbu.tcp.unlock_server import TCPUnlockServer
-from qrcode.main import QRCode
-
 
 app = typer.Typer(pretty_exceptions_show_locals=False)
 
@@ -42,7 +43,7 @@ def print_qr(data: str):
 
 def load_conf() -> dict[str, Any]:
     if not _CONF_PATH.exists():
-        LOGGER.info(f"Conf file {_CONF_PATH} does not exist")
+        LOGGER.info("Conf file %s does not exist", _CONF_PATH)
         raise typer.Exit(code=1)
     with open(_CONF_PATH) as f:
         return json.load(f)
@@ -78,10 +79,10 @@ def pair_server(
 ):
     conf = load_conf()
     if CONF_PAIRING_DATA not in conf:
-        LOGGER.info(f"Conf file is missing a '{CONF_PAIRING_DATA}' section.")
+        LOGGER.info("Conf file is missing a '%s' section.", CONF_PAIRING_DATA)
         raise typer.Exit(code=1)
     if CONF_PAIRING_RESPONSE not in conf:
-        LOGGER.info(f"Conf file is missing a '{CONF_PAIRING_RESPONSE}' section.")
+        LOGGER.info("Conf file is missing a '%s' section.", CONF_PAIRING_RESPONSE)
         raise typer.Exit(code=1)
 
     pairing_data: PairingQRData = PairingQRData.from_dict(conf[CONF_PAIRING_DATA])
@@ -91,11 +92,11 @@ def pair_server(
 
     if ip:
         LOGGER.debug(
-            f"IP {ip} was given in CLI, will bind to it instead of the conf one."
+            "IP %s was given in CLI, will bind to it instead of the conf one.", ip
         )
         if ip == "auto":
             ip = get_ip()
-            LOGGER.debug(f"'auto' was passed as IP, will automatically bind to {ip}.")
+            LOGGER.debug("'auto' was passed as IP, will automatically bind to %s.", ip)
         pairing_data.ip = ip
         pairing_response.host_address = ip
 
@@ -114,7 +115,7 @@ def pair_server(
 @app.command()
 def pair_client(
     device_name: Annotated[
-        Optional[str],
+        str | None,
         typer.Option(
             "-n", help="Override this client's name. Defaults to the host name."
         ),
@@ -133,14 +134,14 @@ def pair_client(
 ):
     conf = load_conf()
     if CONF_PAIRING_DATA not in conf:
-        LOGGER.info(f"Conf file is missing a '{CONF_PAIRING_DATA}' section.")
+        LOGGER.info("Conf file is missing a '%s' section.", CONF_PAIRING_DATA)
         raise typer.Exit(code=1)
 
     pairing_data: PairingQRData = PairingQRData.from_dict(conf[CONF_PAIRING_DATA])
 
     async def _apair():
         client = TCPPairClient(pairing_qr_data=pairing_data, device_name=device_name)
-        LOGGER.info(f"Start pairing with {pairing_data.ip}:{pairing_data.port}...")
+        LOGGER.info("Start pairing with %s:%s...", pairing_data.ip, pairing_data.port)
         response: PacketPairResponse = await client.pair(timeout=float(timeout))
         LOGGER.info("Received: ")
         if not show_password:
@@ -149,7 +150,9 @@ def pair_client(
         LOGGER.info(response)
 
         LOGGER.info(
-            f"Successfully paired with {response.host_name} ({response.host_address})."
+            "Successfully paired with %s (%s).",
+            response.host_name,
+            response.host_address,
         )
 
     asyncio.run(_apair())
@@ -167,7 +170,7 @@ def unlock_server(
 ):
     conf = load_conf()
     if CONF_PAIRINGS not in conf:
-        LOGGER.info(f"Conf file is missing a '{CONF_PAIRINGS}' section.")
+        LOGGER.info("Conf file is missing a '%s' section.", CONF_PAIRINGS)
         raise typer.Exit(code=1)
 
     pairings: list[PCPairingSecret] = [
@@ -176,11 +179,11 @@ def unlock_server(
 
     if ip:
         LOGGER.debug(
-            f"IP {ip} was given in CLI, will bind to it instead of the conf one."
+            "IP %s was given in CLI, will bind to it instead of the conf one.", ip
         )
         if ip == "auto":
             ip = get_ip()
-            LOGGER.debug(f"'auto' was passed as IP, will automatically bind to {ip}.")
+            LOGGER.debug("'auto' was passed as IP, will automatically bind to %s.", ip)
         for pairing in pairings:
             pairing.server_ip_address = ip
 
@@ -217,7 +220,7 @@ def unlock_client(
 ):
     conf = load_conf()
     if CONF_PAIRINGS not in conf:
-        LOGGER.info(f"Conf file is missing a '{CONF_PAIRINGS}' section.")
+        LOGGER.info("Conf file is missing a '%s' section.", CONF_PAIRINGS)
         raise typer.Exit(code=1)
 
     pairings: list[PCPairingSecret] = [
@@ -233,10 +236,7 @@ def unlock_client(
 
     if not pairing:
         for p in pairings:
-            if p.desktop_ip_address == target:
-                pairing = p
-                break
-            elif p.pairing_id == target:
+            if p.desktop_ip_address == target or p.pairing_id == target:
                 pairing = p
                 break
     if not pairing:
@@ -245,7 +245,9 @@ def unlock_client(
     async def _aunlock():
         client = TCPUnlockClient(pairing=pairing)
         LOGGER.info(
-            f"Start unlocking process with server at {pairing.server_ip_address}:{pairing.server_port}..."
+            "Start unlocking process with server at %s:%s...",
+            pairing.server_ip_address,
+            pairing.server_port,
         )
         response: PacketUnlockResponse = await client.unlock(timeout=float(timeout))
         LOGGER.info("Success! Received: ")

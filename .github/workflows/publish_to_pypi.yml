@@ -32,12 +32,20 @@ jobs:
           echo "is_new_version=true" >> "$GITHUB_OUTPUT"
         fi
 
+  ci:
+    name: CI
+    needs: version-check
+    if: needs.version-check.outputs.is_new_version == 'true'
+    uses: ./.github/workflows/ci.yml
+
   build:
     name: Build dist
     runs-on: ubuntu-latest
 
-    # run only if the version has not been released yet
-    needs: version-check
+    # run only if the version has not been released yet, and the CI passed
+    needs:
+    - version-check
+    - ci
     if: needs.version-check.outputs.is_new_version == 'true'
 
     steps:

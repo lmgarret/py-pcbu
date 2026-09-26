@@ -112,6 +112,14 @@ python -m pcbu --help
 ```
 for more info.
 
+Tests, lint and formatting run with [uv](https://docs.astral.sh/uv/):
+```bash
+uv sync
+uv run pytest
+uv run ruff check
+uv run ruff format --check
+```
+
 ## TODOs
  - [X] Rewrite `TCPPairServer` with `asyncio`
  - [X] Rewrite `TCPPairClient` with `asyncio`
@@ -122,15 +130,9 @@ for more info.
  - [ ] Handle more failure cases (e.g. rejected UnlockRequest on the client)
 
 ## Releasing
-Releases are automatically created when a change to `version` in `pyproject.toml` is detected. The new files are automatically uploaded to PyPI and the signed release is uploaded to GitHub Releases.
-The current steps to release are:
-1. Make sure `pyproject.toml` is updated with the new version
-2. Using [cucumber/changelog](https://github.com/cucumber/changelog), add the changes and update `CHANGELOG.md` with the new version
-```console
-./changelog -o CHANGELOG.md added "Add this and that"
-./changelog -o CHANGELOG.md release 0.1.2
-```
-3. Commit the pyproject.toml and CHANGELOG.md changes
-4. Push the changes to GitHub
-5. Wait for the release to be published on PyPI
-6. Wait for the release to be published on GitHub Releases
+A release is published whenever `main` carries a `version` in `pyproject.toml` that has no git tag yet: the CI runs, then the package is built, signed with Sigstore, attached to a GitHub Release tagged with the version, and uploaded to TestPyPI then PyPI. A failed release can be retried by pushing a fix, or by running the `Release` workflow manually.
+
+To release:
+1. Bump `version` in `pyproject.toml` and run `uv lock`
+2. Move the `Unreleased` entries of `CHANGELOG.md` under a new `## [x.y.z] - YYYY-MM-DD` section (its content becomes the release notes)
+3. Open a PR and merge it into `main`

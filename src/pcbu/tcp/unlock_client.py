@@ -4,10 +4,10 @@ import uuid
 
 from pcbu.crypto import decrypt_aes, encrypt_aes
 from pcbu.models import (
-    PCPairingSecret,
-    PacketUnlockResponse,
-    PacketUnlockRequest,
     EncryptedUnlockPayload,
+    PacketUnlockRequest,
+    PacketUnlockResponse,
+    PCPairingSecret,
 )
 from pcbu.tcp.common import areceive, asend
 
@@ -33,7 +33,9 @@ class TCPUnlockClient:
 
         try:
             LOGGER.info(
-                f"Connected to {self.pairing.server_ip_address}:{self.pairing.server_port}"
+                "Connected to %s:%s",
+                self.pairing.server_ip_address,
+                self.pairing.server_port,
             )
 
             LOGGER.debug("Send PacketUnlockRequest...")

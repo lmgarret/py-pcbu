@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - `pcbu.errors.InvalidTimestampError`, raised instead of a bare `Exception` when a received packet's timestamp is too far from the local clock. Its message gives the clock difference
 
+### Changed
+- Packets are accepted with timestamps up to 2 minutes away from the local clock, instead of 20 seconds, as the desktop does
+
 ## [0.7.0] - 2026-09-26
 ### Added
 - `pcbu.models.PCBUModel` base class: subclass it for models nested in py-pcbu ones, so they load and dump keys alike

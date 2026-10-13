@@ -5,13 +5,15 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
+from pcbu.errors import InvalidTimestampError
+
 AES_KEY_SIZE = 256
 IV_SIZE = 16
 SALT_SIZE = 16
 GCM_TAG_SIZE = 16
 ITERATIONS = 65535
 TIMESTAMP_SIZE = 8
-TIMESTAMP_TIMEOUT = 20_000
+TIMESTAMP_TIMEOUT = 120_000  # same as the desktop (CRYPT_PACKET_TIMEOUT)
 
 
 def current_time_millis() -> int:
@@ -57,5 +59,7 @@ def decrypt_aes(src: bytes, pwd: str) -> bytes:
     timestamp = int.from_bytes(plaintext[:TIMESTAMP_SIZE], byteorder="big")
     time_diff = current_time_millis() - timestamp
     if time_diff < -TIMESTAMP_TIMEOUT or time_diff > TIMESTAMP_TIMEOUT:
-        raise Exception("Invalid timestamp on AES data!")
+        raise InvalidTimestampError(
+            f"Invalid timestamp on AES data: clocks differ by {abs(time_diff) / 1000:.0f}s"
+        )
     return plaintext[TIMESTAMP_SIZE:]

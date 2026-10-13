@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-10-13
+### Added
+- `TCPUnlockServerBase.is_listening_for(pairing)`, whether the server is bound to the address of a pairing, and `TCPUnlockServerBase.bind_errors`, the addresses that could not be bound with their error
+
+### Changed
+- The unlock server binds each address on its own: an address that cannot be bound (e.g. an IP address the host no longer has) is logged and skipped instead of preventing every pairing from unlocking. Entering the server only fails when no address can be bound
+- Rejected unlock requests log why: the expected and actual desktop IP addresses, or the expected and actual usernames, instead of "found no pairing"
+
 ## [0.8.0] - 2026-10-13
 ### Added
 - `pcbu.errors.InvalidTimestampError`, raised instead of a bare `Exception` when a received packet's timestamp is too far from the local clock. Its message gives the clock difference
@@ -111,7 +119,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Initial release!
 
-[Unreleased]: https://github.com/lmgarret/py-pcbu/compare/0.8.0...HEAD
+[Unreleased]: https://github.com/lmgarret/py-pcbu/compare/0.9.0...HEAD
+[0.9.0]: https://github.com/lmgarret/py-pcbu/compare/0.8.0...0.9.0
 [0.8.0]: https://github.com/lmgarret/py-pcbu/compare/0.7.0...0.8.0
 [0.7.0]: https://github.com/lmgarret/py-pcbu/compare/0.6.1...0.7.0
 [0.6.1]: https://github.com/lmgarret/py-pcbu/compare/0.6.0...0.6.1

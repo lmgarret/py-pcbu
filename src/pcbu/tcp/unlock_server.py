@@ -53,7 +53,9 @@ class TCPUnlockServerBase(AsyncContextDecorator, metaclass=ABCMeta):
     ) -> None:
         self.pc_pairings = pc_pairings
         self._context_stack = AsyncExitStack()
-        self._servers: dict[int, Server] = dict()
+        self._servers: dict[tuple[str, int], Server] = dict()
+        # addresses that could not be bound when entering, with their error
+        self.bind_errors: dict[tuple[str, int], OSError] = dict()
         # necessary to decouple unlocking. Keyed by pairing_id
         self._unlock_packet_writers: dict[str, UnlockPacketWriter] = dict()
         # every open connection, closed when the server stops
@@ -61,18 +63,30 @@ class TCPUnlockServerBase(AsyncContextDecorator, metaclass=ABCMeta):
 
     async def __aenter__(self):
         await self._context_stack.__aenter__()
-        for port in {pair.server_port for pair in self.pc_pairings}:
-            ips = {
-                pair.server_ip_address
-                for pair in self.pc_pairings
-                if pair.server_port == port
-            }
-            LOGGER.info("Binding TCPUnlockServer to %s:%s", ips, port)
-            server = await asyncio.start_server(
-                self._create_handler(ips, port), list(ips), port
-            )
-            self._servers[port] = server
+        self.bind_errors = dict()
+        addresses = sorted(
+            {(pair.server_ip_address, pair.server_port) for pair in self.pc_pairings}
+        )
+        # bound one by one, so that an address that cannot be bound (e.g. an IP address
+        # the host no longer has) does not prevent serving the other pairings
+        for ip, port in addresses:
+            LOGGER.info("Binding TCPUnlockServer to %s:%s", ip, port)
+            try:
+                server = await asyncio.start_server(
+                    self._create_handler(ip, port), ip, port
+                )
+            except OSError as e:
+                LOGGER.error("Cannot bind TCPUnlockServer to %s:%s: %s", ip, port, e)
+                self.bind_errors[(ip, port)] = e
+                continue
+            self._servers[(ip, port)] = server
             await self._context_stack.enter_async_context(server)
+        if addresses and not self._servers:
+            await self._context_stack.__aexit__(None, None, None)
+            raise OSError(
+                f"Could not bind TCPUnlockServer to any of {addresses}: "
+                + "; ".join(str(e) for e in self.bind_errors.values())
+            )
         await self.on_enter()
         return self
 
@@ -147,6 +161,11 @@ class TCPUnlockServerBase(AsyncContextDecorator, metaclass=ABCMeta):
         """Method called whenever the server's context is exited. Can be overriden by user"""
         pass
 
+    def is_listening_for(self, pairing: PCPairing) -> bool:
+        """Whether the server is bound to the address the pairing's desktop sends its
+        unlock requests to."""
+        return (pairing.server_ip_address, pairing.server_port) in self._servers
+
     def has_pending_unlock_request(self, pairing: PCPairing) -> bool:
         """Whether an unlock request from this pairing is waiting to be answered."""
         return pairing.pairing_id in self._unlock_packet_writers
@@ -165,14 +184,14 @@ class TCPUnlockServerBase(AsyncContextDecorator, metaclass=ABCMeta):
             await writer.close()
 
     def _create_handler(
-        self, ips: set[str], port: int
+        self, ip: str, port: int
     ) -> Callable[[StreamReader, StreamWriter], Awaitable[None] | None]:
         async def handle(reader: StreamReader, writer: StreamWriter):
             # TODO add logging filter so that the ip and port show up in the logs automatically
             client_ip = writer.get_extra_info("peername")[0]
             self._connections.add(writer)
             try:
-                await self._handle_unlock_request(reader, writer, client_ip, ips, port)
+                await self._handle_unlock_request(reader, writer, client_ip, ip, port)
             finally:
                 self._connections.discard(writer)
                 writer.close()
@@ -184,7 +203,7 @@ class TCPUnlockServerBase(AsyncContextDecorator, metaclass=ABCMeta):
         reader: StreamReader,
         writer: StreamWriter,
         client_ip: str,
-        ips: set[str],
+        ip: str,
         port: int,
     ):
         LOGGER.debug("Wait for packets...")
@@ -210,7 +229,7 @@ class TCPUnlockServerBase(AsyncContextDecorator, metaclass=ABCMeta):
 
             if pairing is None or unlock_token is None:
                 raise ValueError(
-                    f"Server listening on {ips}:{port} found no pairing for desktop at {client_ip}."
+                    f"Server listening on {ip}:{port} found no pairing for the unlock request from {client_ip}."
                 )
             LOGGER.info(
                 "Received PacketUnlockRequest from %s, for user %s",
@@ -251,7 +270,8 @@ class TCPUnlockServerBase(AsyncContextDecorator, metaclass=ABCMeta):
     ) -> tuple[PCPairingSecret | None, str | None]:
         """Given the received data and the sender's ip address, tries to match the unlock requester to
         a registered PCPairing. Return the found pairing if any along with the unlock token.
-        Returns (None,None) if none were found"""
+        Returns (None,None) if none were found, raises a ValueError if the pairing was found
+        but the request does not match it (undecryptable, other user, other desktop ip address)"""
         request = PacketUnlockRequest.from_json(data.decode())
 
         for pairing in self.pc_pairings:
@@ -273,11 +293,18 @@ class TCPUnlockServerBase(AsyncContextDecorator, metaclass=ABCMeta):
                     ignore_case
                     and enc_payload.auth_user.lower() == pairing.username.lower()
                 )
-                if (
-                    desktop_ip_address == pairing.desktop_ip_address
-                    and username_matches
-                ):
-                    return pairing, enc_payload.unlock_token
+                if not username_matches:
+                    raise ValueError(
+                        f"Unlock request for pairing {pairing.pairing_id} is for user "
+                        f"{enc_payload.auth_user}, expected {pairing.username}."
+                    )
+                if desktop_ip_address != pairing.desktop_ip_address:
+                    raise ValueError(
+                        f"Unlock request for pairing {pairing.pairing_id} came from "
+                        f"{desktop_ip_address}, expected the desktop at "
+                        f"{pairing.desktop_ip_address}."
+                    )
+                return pairing, enc_payload.unlock_token
         return None, None
 
 

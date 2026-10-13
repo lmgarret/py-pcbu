@@ -1,5 +1,6 @@
 import asyncio
 import contextlib
+import logging
 
 import pytest
 
@@ -124,6 +125,47 @@ async def test_reject_unknown_desktop_ip(make_pairing, desktop_os):
         await until(lambda: server.invalid == ["127.0.0.1"])
         assert server.valid == []
         writer.close()
+
+
+async def test_reject_unknown_desktop_ip_logs_both_ips(make_pairing, caplog):
+    pairing = make_pairing(desktop_ip="10.0.0.9")
+    async with running(RecordingServer([pairing])) as server:
+        _, writer = await send_request(pairing)
+        await until(lambda: server.invalid == ["127.0.0.1"])
+        writer.close()
+    assert "came from 127.0.0.1, expected the desktop at 10.0.0.9" in caplog.text
+
+
+async def test_reject_other_user_logs_it(make_pairing, caplog):
+    pairing = make_pairing(username="user")
+    async with running(RecordingServer([pairing])) as server:
+        _, writer = await send_request(pairing, username="other")
+        await until(lambda: server.invalid == ["127.0.0.1"])
+        writer.close()
+    assert "is for user other, expected user" in caplog.text
+
+
+async def test_serve_despite_unbindable_address(make_pairing, caplog):
+    good = make_pairing("a")
+    # TEST-NET-1 address the host does not have
+    stale = make_pairing("b")
+    stale.server_ip_address = "192.0.2.1"
+    caplog.set_level(logging.ERROR)
+    async with running(TCPUnlockServer([good, stale])) as server:
+        assert server.is_listening_for(good)
+        assert not server.is_listening_for(stale)
+        assert list(server.bind_errors) == [("192.0.2.1", good.server_port)]
+        response = await TCPUnlockClient(good).unlock(timeout=5)
+    assert response.password == good.password
+    assert "Cannot bind TCPUnlockServer to 192.0.2.1" in caplog.text
+
+
+async def test_fail_when_no_address_can_be_bound(make_pairing):
+    stale = make_pairing()
+    stale.server_ip_address = "192.0.2.1"
+    with pytest.raises(OSError, match="Could not bind TCPUnlockServer"):
+        async with TCPUnlockServer([stale]):
+            pass
 
 
 async def test_reject_wrong_key(make_pairing):

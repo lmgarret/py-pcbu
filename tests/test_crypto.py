@@ -2,6 +2,7 @@ import pytest
 from cryptography.exceptions import InvalidTag
 
 from pcbu import crypto
+from pcbu.errors import InvalidTimestampError
 
 
 def test_roundtrip():
@@ -31,5 +32,5 @@ def test_expired_timestamp(monkeypatch, offset):
     monkeypatch.setattr(crypto, "current_time_millis", lambda: now + offset)
     encrypted = crypto.encrypt_aes(b"data", "secret")
     monkeypatch.setattr(crypto, "current_time_millis", lambda: now)
-    with pytest.raises(Exception, match="Invalid timestamp"):
+    with pytest.raises(InvalidTimestampError, match="Invalid timestamp"):
         crypto.decrypt_aes(encrypted, "secret")
